@@ -53,7 +53,7 @@ char *prettify(char *str,style *s){
 void pprint(char *str, style *s, ...){
   char buffer [MAX_MSG_SIZE];
   va_list args;
-  va_start(args);
+  va_start(args, s);
   vsprintf(buffer, str, args);
   va_end(args);
   char *pstr = prettify(buffer, s);
@@ -66,7 +66,7 @@ void xpprint(char *str, Color fg, Color bg, bool bold, bool underline, ...){
   char buffer [MAX_MSG_SIZE];
   style s = {fg,bg,bold,underline};
   va_list args;
-  va_start(args);
+  va_start(args, underline);
   vsprintf(buffer, str, args);
   va_end(args);
   char *pstr = prettify(buffer, &s);
@@ -77,7 +77,7 @@ void xpprint(char *str, Color fg, Color bg, bool bold, bool underline, ...){
 void pperror(char *str, style *s, ...){
   char buffer [MAX_MSG_SIZE];
   va_list args;
-  va_start(args);
+  va_start(args, s);
   vsprintf(buffer, str, args);
   va_end(args);
   char *pstr = prettify(buffer, s);
@@ -90,7 +90,7 @@ void xpperror(char *str, Color fg, Color bg, bool bold, bool underline, ...){
   char buffer [MAX_MSG_SIZE];
   style s = {fg,bg,bold,underline};
   va_list args;
-  va_start(args);
+  va_start(args, underline);
   vsprintf(buffer, str, args);
   va_end(args);
   char *pstr = prettify(buffer, &s);
