@@ -1,5 +1,8 @@
 #include "utils.h"
 #include "bloques.h"
+#include "ficheros_basico.h"
+#include <string.h>
+
 int main(int argc, char **argv){
   int nblocks = atoi(argv[2]);
   if(nblocks==0){
@@ -19,5 +22,10 @@ int main(int argc, char **argv){
   for(int i = 0; i < nblocks; i++){
     bwrite(i, buffer);
   }
+
+  initSB(nblocks, nblocks/4);
+  initMB(nblocks);
+  initAI(nblocks);
+
   return bumount();
 }
