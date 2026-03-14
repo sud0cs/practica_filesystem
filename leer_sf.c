@@ -3,7 +3,9 @@
 #include "utils.h"
 int main(int argc, char **argv){
     superblock SB;
-    bmount(argv[1]);
+    if (bmount(argv[1]) == FALLO){
+	xpperror("Could not mount disk", RED, DEFAULT, true, false);
+    }
     bread(SBPOS,&SB);
     xpprint("###############", SALMON, DEFAULT, false, false);xpprint(" SUPERBLOCK ", DEFAULT, DEFAULT, true, false);xpprint("###############\n", SALMON, DEFAULT, false, false);
     xpprint("# ", SALMON, DEFAULT, false, false);xpprint("Start BitMap",PINK, DEFAULT, true, false);printf(": %d\n", SB.startMB);
