@@ -1,6 +1,10 @@
+#include <time.h>
+#include <limits.h>
+
 #define SBPOS 0
 #define SBSIZE 1
 #define INODESIZE 128
+
 typedef struct{
    unsigned int startMB;
    unsigned int endMB;
