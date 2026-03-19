@@ -158,8 +158,7 @@ int initAI(int nblocks){
 				//Inodo libre -> enlazado al siguiente
 				inodes[i].type = 'l';
 				inodes[i].directPointers[0] = icount;
-	    	}
-	    	else{
+	    	} else{
 				//Último inodo -> apunta a NULL (UINT_MAX)
 				inodes[i].type = 'l';
 				inodes[i].directPointers[0] = UINT_MAX;
@@ -173,4 +172,181 @@ int initAI(int nblocks){
     }
 
     return EXITO;
+}
+
+int escribir_bit(unsigned int nbloque, unsigned int bit){
+	superblock SB;
+	bread(SBPOS, &SB);
+
+	unsigned int posbyteMB = nbloque/8;
+	unsigned int posbit = nbloque%8;
+	unsigned int nbloqueMB = posbyteMB/BLOCKSIZE;
+	unsigned int nbloqueabs = SB.startMB+nbloqueMB;
+
+	unsigned char bufferMB[BLOCKSIZE];
+	bread(nbloqueabs, bufferMB);
+
+	unsigned int posbyte = posbyteMB%BLOCKSIZE;
+
+	unsigned char mascara = 128;
+	mascara >>= posbit;
+
+	if(bit ==1){
+		bufferMB[posbyte] |= mascara;
+	} else{
+		bufferMB[posbyte] &= ~mascara;
+	}
+
+	return bwrite(nbloqueabs, bufferMB);
+}
+
+char leer_bit(unsigned int nbloque){
+	superblock SB;
+	bread(SBPOS, &SB);
+
+	unsigned int posbyteMB = nbloque/8;
+	unsigned int posbit = nbloque%8;
+	unsigned int nbloqueMB = posbyteMB/BLOCKSIZE;
+	unsigned int nbloqueabs = SB.startMB+nbloqueMB;
+
+	unsigned char bufferMB[BLOCKSIZE];
+	bread(nbloqueabs, bufferMB);
+
+	unsigned int posbyte = posbyteMB%BLOCKSIZE;
+
+	unsigned char mascara = 128;
+	mascara >>= posbit;
+	mascara &= bufferMB[posbyte];
+	mascara >>= (7-posbit);
+
+	return mascara;
+}
+
+int reservar_bloque(){
+	superblock SB;
+	bread(SBPOS, &SB);
+
+	if(SB.freeBlocks == 0){
+		return FALLO;
+	}
+
+	unsigned char bufferMB[BLOCKSIZE];
+	unsigned char bufferAux[BLOCKSIZE];
+	memset(bufferAux, 255, BLOCKSIZE);
+
+	int nbloqueMB = 0;
+	while(nbloqueMB < (SB.endMB - SB.startMB + 1)){
+		bread(SB.startMB+nbloqueMB, bufferMB);
+		if(memcmp(bufferMB, bufferAux, BLOCKSIZE) != 0){
+			break;
+		}
+		nbloqueMB++;
+	}
+
+	int posbyte = 0;
+	while(bufferMB[posbyte] == 255){
+		posbyte++;
+	}
+
+	unsigned char mascara = 128;
+	int posbit = 0;
+	while(bufferMB[posbyte] & mascara){
+		mascara >>= 1;
+		posbit++;
+	}
+
+	int nbloque = (nbloqueMB*BLOCKSIZE+posbyte)*8+posbit;
+
+	escribir_bit(nbloque, 1);
+
+	SB.freeBlocks--;
+	bwrite(SBPOS, &SB);
+
+	unsigned char buffer[BLOCKSIZE];
+	memset(buffer, 0, BLOCKSIZE);
+	bwrite(nbloque, buffer);
+
+	return nbloque;
+}
+
+int liberar_bloque(unsigned int nbloque){
+	superblock SB;
+	bread(SBPOS, &SB);
+
+	excribir_bit(nbloque, 0);
+
+	SB.freeBlocks++;
+	bwrite(SBPOS, &SB);
+
+	return nbloque;
+}
+
+int escribir_inodo(unsigned int ninodo, struct inodo *inodo){
+	superblock SB;
+	bread(SBPOS, &SB);
+
+	unsigned int nbloqueAI = (ninodo*INODESIZE)/BLOCKSIZE;
+	unsigned int nbloqueabs = SB.startAI+nbloqueAI;
+
+	inode inodos[BLOCKSIZE/INODESIZE];
+	bread(nbloqueabs, inodos);
+
+	unsigned int posinodo = ninodo%(BLOCKSIZE/INODESIZE);
+	inodos[posinodo] = *inodo;
+
+	return bwrite(nbloqueabs, inodos);
+}
+
+int leer_inodo(unsigned int ninodo, struct inodo *inodo){
+	superblock SB;
+	bread(SBPOS, &SB);
+
+	unsigned int nblqoueAI = (ninodo*INODESIZE)/BLOCKSIZE;
+	unsigned int nbloqueabs = SB.startAI+nblqoueAI;
+
+	inode inodos[BLOCKSIZE/INODESIZE];
+	bread(nbloqueabs, inodos);
+
+	unsigned int posinodo = ninodo%(BLOCKSIZE/INODESIZE);
+	*inodo = inodos[posinodo];
+
+	return EXITO;
+}
+
+int reservar_inodo(unsigned char tipo, unsigned char permisos){
+	superblock SB;
+	bread(SBPOS, &SB);
+
+	if(SB.freeInodes == 0){
+		return FALLO;
+	}
+
+	unsigned int posInodoReservado = SB.firstFreeInode;
+
+	inode inodo;
+	leer_inodo(posInodoReservado, &inodo);
+
+	SB.firstFreeInode = inodo.directPointers[0];
+
+	inodo.type = tipo;
+	inodo.perms = permisos;
+	inodo.nlinks = 1;
+	inodo.logicByteSize = 0;
+	inodo.usedBlocks = 0;
+
+	time_t now = time(NULL);
+	inodo.atime = now;
+	inodo.mtime = now;
+	inodo.ctime = now;
+	inodo.btime = now;
+
+	memset(inodo.directPointers, 0, sizeof(inodo.directPointers));
+	memset(inodo.indirectPointers, 0, sizeof(inodo.indirectPointers));
+
+	escribir_inodo(posInodoReservado, &inodo);
+
+	SB.freeInodes--;
+	bwrite(SBPOS, &SB);
+
+	return posInodoReservado;
 }
