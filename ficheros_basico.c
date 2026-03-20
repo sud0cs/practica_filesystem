@@ -273,7 +273,7 @@ int liberar_bloque(unsigned int nbloque){
 	superblock SB;
 	bread(SBPOS, &SB);
 
-	excribir_bit(nbloque, 0);
+	escribir_bit(nbloque, 0);
 
 	SB.freeBlocks++;
 	bwrite(SBPOS, &SB);
@@ -281,7 +281,7 @@ int liberar_bloque(unsigned int nbloque){
 	return nbloque;
 }
 
-int escribir_inodo(unsigned int ninodo, struct inodo *inodo){
+int escribir_inodo(unsigned int ninodo, inode *inodo){
 	superblock SB;
 	bread(SBPOS, &SB);
 
@@ -297,7 +297,7 @@ int escribir_inodo(unsigned int ninodo, struct inodo *inodo){
 	return bwrite(nbloqueabs, inodos);
 }
 
-int leer_inodo(unsigned int ninodo, struct inodo *inodo){
+int leer_inodo(unsigned int ninodo, inode *inodo){
 	superblock SB;
 	bread(SBPOS, &SB);
 
