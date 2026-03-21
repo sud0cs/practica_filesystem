@@ -72,35 +72,22 @@ int main(int argc, char **argv){
      *   - Cada inodo apunta al siguente
      *   - El último apunta a UINT_MAX
     */
-    printf("\nChained inodes check\n\n");
-
+    printf("\nCHAINED INODES CHECK\n\n");
     int ni = BLOCKSIZE/INODESIZE;
-    bool dots = false;
     inode ibuff[ni];
-    int last_inode = SB.rootInode;
-
-    printf("%d -> ", SB.rootInode);
+    int last_inode = SB.firstFreeInode;
+    int prev_inode = SB.firstFreeInode;
     
-    //Recorremos todos los bloques del AI
-    for(int i = SB.startAI;i<SB.startData;i++){
-	    bread(i, ibuff);
-	    for(int j = 0; j<ni; j++){
-	        if(ibuff[j].directPointers[0]!=-1){
-                //Comprobación estricta del encadenamiento
-		        if(i<=SB.startAI||i==SB.endAI){
-		            if(ibuff[j].directPointers[0]!=last_inode+1){
-                        xpperror("\nERROR: inode %d points to %d", RED, DEFAULT, false, false, last_inode, ibuff[j].directPointers[0]);return FALLO;
-                    }
-		            printf("%d -> ", ibuff[j].directPointers[0]);
-		        } else if(!dots){
-                    dots = true; printf("... -> ");
-                }
-	        } else {
-                //Último inodo apunta a UINT_MAX
-                xpprint("%d", BLUE, DEFAULT, false, false, ibuff[j].directPointers[0]);
-            }
-	        last_inode+=1;
-	    }
+    //Recorre todos los inodos 
+    while(true){
+	int bn = last_inode/ni; //block number
+	int ii = last_inode%ni; //inode index (indice del inodo en el buffer de inodos / bloque)
+	bread(SB.startAI+bn, ibuff);
+	printf("%d", ibuff[ii].directPointers[0]);
+	xpprint(" -> ", 60, DEFAULT, true, false);
+	prev_inode = last_inode;
+	last_inode = ibuff[ii].directPointers[0];
+	if (ibuff[ii].directPointers[0] == UINT_MAX || prev_inode == last_inode){printf("\x1b[4D\x1b[0K");break;} //parar y borrar la última flecha
     }
     //Desmontamos el disco
     bumount();
