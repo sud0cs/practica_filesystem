@@ -77,13 +77,12 @@ int main(int argc, char **argv){
     inode ibuff[ni];
     int last_inode = SB.firstFreeInode;
     int prev_inode = SB.firstFreeInode;
-    
     //Recorre todos los inodos 
     while(true){
 	int bn = last_inode/ni; //block number
 	int ii = last_inode%ni; //inode index (indice del inodo en el buffer de inodos / bloque)
 	bread(SB.startAI+bn, ibuff);
-	printf("%d", ibuff[ii].directPointers[0]);
+	printf("%d", last_inode);
 	xpprint(" -> ", 60, DEFAULT, true, false);
 	prev_inode = last_inode;
 	last_inode = ibuff[ii].directPointers[0];
