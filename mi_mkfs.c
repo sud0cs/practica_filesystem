@@ -51,6 +51,8 @@ int main(int argc, char **argv){
   */
   initAI(nblocks);
 
+  reservar_inodo('d', 7);
+
   //Cerramos el disco virtual
   return bumount();
 }
