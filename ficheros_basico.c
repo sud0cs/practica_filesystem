@@ -486,3 +486,133 @@ int reservar_inodo(unsigned char tipo, unsigned char permisos){
 
 	return posInodoReservado;
 }
+
+/**
+ * get_block_rank()
+ * ----------------------------------------------------------
+ * Encuentra el rango en el cual se está el bloque lógico y guarda la dirección
+ * a la que apunta
+ * 
+ * parámetros:
+ *  ptrinode -> puntero al inodo al que pertenece el bloque lógico
+ *  logicblock -> número de bloque lógico
+ *  ptr -> puntero a un entero sin signo en el cual se guardará la dirección a la que se apunta
+ *
+ * devuelve:
+ *  El rango en el cual se encuentra el bloque lógico.
+ *
+ */
+int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
+    switch(logicblock){
+	// logicblock se encuentra en el rango 0 - DIRECT
+	// NOTA: No todos los compiladores pueden compilar esta sintaxi
+	// GCC que es el que usamos en esta asignatura si lo acepta
+	case 0 ... DIRECT:
+	    *ptr = ptrinode -> directPointers[logicblock];
+	    return 0;
+	//logicblock se encuentra en el rango DIRECT + 1 - INDIRECT1
+	case DIRECT+1 ... INDIRECT0:
+	    *ptr = ptrinode -> indirectPointers[0];
+	    return 1;
+	case INDIRECT0+1 ... INDIRECT1:
+	    *ptr = ptrinode -> indirectPointers[1];
+	    return 2;
+	case INDIRECT1+1 ... INDIRECT2:
+	    *ptr = ptrinode -> indirectPointers[2];
+	    return 3;
+	default:
+	    *ptr = 0;
+	    xpperror("logic block does not exist", RED, DEFAULT, true, false);
+	    return -1;
+    }
+}
+
+
+/**
+ * translate_inode_block()
+ * ----------------------------------------------------------
+ * Dada la dirección de un bloque lógico perteneciente a un inodo
+ * devuelve la dirección global de este bloque
+ * 
+ * parámetros:
+ *  ninodo -> identificador del inodo
+ *  logicblock -> número de bloque lógico
+ *  reserve -> true si se tienen que reservar los bloques que no existen
+ *
+ * devuelve:
+ *  La dirección global del bloque lógico
+ *
+ */
+int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool reserve){
+    inode ptrinode;
+    unsigned int ptr, pptr;
+    leer_inodo(ninode, &ptrinode);
+    int rank = get_block_rank(&ptrinode, logicblock, &ptr);
+    bool update_inode = false;
+    if (rank == 0) {
+	if(ptr == 0){
+	    if(!reserve) return FALLO;
+	    ptr = reservar_bloque();
+	    xpperror("\n[ translate_inode_block() -> inode.directPointers[%d] = %d ]", GRAY, DEFAULT, false, false, logicblock, ptr);
+	    ptrinode.directPointers[logicblock] = ptr;
+	    ptrinode.usedBlocks++;
+	    ptrinode.ctime = time(NULL);
+	    update_inode = true;
+	}
+    }
+    else{
+	unsigned int buffer[NPOINTERS];
+	memset(buffer, 0, BLOCKSIZE);
+	unsigned int block;
+	int blvl = rank;
+	int arr = 0;
+	while(rank>0){
+	    switch(rank + arr){
+		case 3:
+		    block = (logicblock-INDIRECT1)/(256*256);
+		    break;
+		case 2:
+		    block = ((logicblock-INDIRECT0)/256)%256;
+		    break;
+		case 1:
+		    block = (logicblock-DIRECT)%256;
+		    break;
+	    }
+	    if(ptr == 0){
+		if(!reserve) return FALLO;
+		ptr = reservar_bloque();
+		if (rank==blvl && !arr) {
+		    ptrinode.indirectPointers[rank-1] = ptr;
+		    xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank, ptr);
+		}
+		else{
+		    buffer[block] = ptr;
+		    xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+		    bwrite(pptr, buffer);
+		}
+		memset(buffer, 0, BLOCKSIZE);
+		ptrinode.usedBlocks++;
+		ptrinode.ctime = time(NULL);
+		update_inode = true;
+	    }
+	    else{
+		if (blvl == rank){rank++; arr=1;}
+		bread(ptr, buffer);
+	    }
+	    pptr = ptr;
+	    ptr = buffer[block];
+	    rank--;
+	}
+	if (ptr==0 && !arr){
+	    ptr = reservar_bloque();
+	    buffer[block] = ptr;
+	    xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+	    bwrite(pptr, buffer);
+	    ptrinode.usedBlocks++;
+	    ptrinode.ctime = time(NULL);
+	    update_inode = true;
+	}
+    }
+    if (update_inode) escribir_inodo(ninode, &ptrinode);
+    return ptr;
+}
