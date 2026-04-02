@@ -553,7 +553,9 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 	if(ptr == 0){
 	    if(!reserve) return FALLO;
 	    ptr = reservar_bloque();
-	    xpperror("\n[ translate_inode_block() -> inode.directPointers[%d] = %d ]", GRAY, DEFAULT, false, false, logicblock, ptr);
+	    #if DBGLVL4
+	    xpprint("\n[ translate_inode_block() -> inode.directPointers[%d] = %d ]", GRAY, DEFAULT, false, false, logicblock, ptr);
+	    #endif
 	    ptrinode.directPointers[logicblock] = ptr;
 	    ptrinode.usedBlocks++;
 	    ptrinode.ctime = time(NULL);
@@ -583,11 +585,15 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		ptr = reservar_bloque();
 		if (rank==blvl && !arr) {
 		    ptrinode.indirectPointers[rank-1] = ptr;
+		    #if DBGLVL4
 		    xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank, ptr);
+		    #endif
 		}
 		else{
 		    buffer[block] = ptr;
+		    #if DBGLVL4
 		    xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+		    #endif
 		    bwrite(pptr, buffer);
 		}
 		memset(buffer, 0, BLOCKSIZE);
@@ -603,14 +609,19 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 	    ptr = buffer[block];
 	    rank--;
 	}
-	if (ptr==0 && !arr){
-	    ptr = reservar_bloque();
-	    buffer[block] = ptr;
-	    xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
-	    bwrite(pptr, buffer);
-	    ptrinode.usedBlocks++;
-	    ptrinode.ctime = time(NULL);
-	    update_inode = true;
+	if (ptr==0){
+	    if (!arr){
+		ptr = reservar_bloque();
+		buffer[block] = ptr;
+		#if DBGLVL4
+		xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+		#endif
+		bwrite(pptr, buffer);
+		ptrinode.usedBlocks++;
+		ptrinode.ctime = time(NULL);
+		update_inode = true;
+	    }
+	    else ptr = pptr;
 	}
     }
     if (update_inode) escribir_inodo(ninode, &ptrinode);
