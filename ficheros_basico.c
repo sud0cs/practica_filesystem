@@ -70,7 +70,7 @@ int initSB(int nblocks, int ninodes){
 	//Información del sistema
   	SB.firstFreeInode = 0;
  	SB.rootInode = 0;
-  	SB.freeBlocks = nblocks;
+  	SB.freeBlocks = nblocks - SB.startData;
  	SB.freeInodes = ninodes;
   	SB.totalBlocks = nblocks;
   	SB.totalInodes = ninodes;
@@ -95,43 +95,38 @@ int initMB(int nblocks){
 	superblock SB;
 	bread(SBPOS, &SB);
 
-	//Numero de bits que representen bloques de metadatos
-	int bs = SB.startData/8; //Bytes completos que se nencesitan
+	int totalMeta = SB.startData; //numero de bloques de metadatos
+	int bits = totalMeta; //numero de bits a poner a 1
+	int fullBytes = bits/8; //bytes completos a 1
+	int restBits = bits%8; //bits sobrantes
 
-	//CASO 1: hay bits sobrantes
-    if(SB.startData%8>0){
-		unsigned char buffer[bs+1];
-		int l = 0;
-		int i = 0;
+	unsigned char buffer[BLOCKSIZE];
 
-		//Construcción del byte parcial
-		for(;i<SB.startData%8; i++){
-	    	l+=1;
-	    	l = l << 1;
+	//Rellenar todos los bloques del MB con 255 (11111111)
+	for(int i = 0; i < tamMB(nblocks); i++){
+		memset(buffer, 255, BLOCKSIZE);
+		bwrite(SB.startMB + i, buffer);
+	}
+
+	//Tractar el bloque parcial final (poner a 0 los bytes que no forman aprte de los metadatos)
+	int lastMB = SB.startMB;
+	bread(lastMB, buffer);
+
+	//Posar a 0 els bytes que sobren
+	for(int i = fullBytes + (restBits > 0 ? 1 : 0); i < BLOCKSIZE; i++){
+		buffer [i] = 0;
+	}
+
+	//Construir el byte parcial
+	if(restBits > 0){
+		unsigned char mask = 0;
+		for(int i = 0; i < restBits; i++){
+			mask |= (1 << (7 - i));
 		}
-
-		//Desplazamiento final para completar el byte
-		l = l << (7-i);
-
-		buffer[bs] = l; //Byte parcial
-		
-		//Rellenar bytes completos con 255(11111111)
-		for(i=0;i<bs-1;i++){
-	    	buffer[i] = 255;
-		}
-
-		//Escribe el bloque del MB
-		bwrite(SB.startMB, buffer);
-    }
-	//CASO 2: no hay residuo -> todos los bytes son 255
-    else{
-		unsigned char buffer[bs];
-		for(int i=0;i<bs;i++){
-	    	buffer[i] = 255;
-		}
-		bwrite(SB.startMB, buffer);
-    }
-    return EXITO;
+		buffer[fullBytes] = mask;
+	}
+	bwrite(lastMB, buffer);
+	return EXITO;
 }
 
 /*
@@ -504,25 +499,25 @@ int reservar_inodo(unsigned char tipo, unsigned char permisos){
  */
 int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
     switch(logicblock){
-	// logicblock se encuentra en el rango 0 - DIRECT
-	// NOTA: No todos los compiladores pueden compilar esta sintaxi
-	// GCC que es el que usamos en esta asignatura si lo acepta
-	case 0 ... DIRECT:
-	    *ptr = ptrinode -> directPointers[logicblock];
-	    return 0;
-	//logicblock se encuentra en el rango DIRECT + 1 - INDIRECT1
-	case DIRECT+1 ... INDIRECT0:
-	    *ptr = ptrinode -> indirectPointers[0];
-	    return 1;
-	case INDIRECT0+1 ... INDIRECT1:
-	    *ptr = ptrinode -> indirectPointers[1];
-	    return 2;
-	case INDIRECT1+1 ... INDIRECT2:
-	    *ptr = ptrinode -> indirectPointers[2];
-	    return 3;
-	default:
-	    *ptr = 0;
-	    xpperror("logic block does not exist", RED, DEFAULT, true, false);
+		// logicblock se encuentra en el rango 0 - DIRECT
+		// NOTA: No todos los compiladores pueden compilar esta sintaxi
+		// GCC que es el que usamos en esta asignatura si lo acepta
+		case 0 ... DIRECT:
+	    	*ptr = ptrinode -> directPointers[logicblock];
+	    	return 0;
+		//logicblock se encuentra en el rango DIRECT + 1 - INDIRECT1
+		case DIRECT+1 ... INDIRECT0:
+	    	*ptr = ptrinode -> indirectPointers[0];
+	    	return 1;
+		case INDIRECT0+1 ... INDIRECT1:
+	    	*ptr = ptrinode -> indirectPointers[1];
+	    	return 2;
+		case INDIRECT1+1 ... INDIRECT2:
+		    *ptr = ptrinode -> indirectPointers[2];
+	    	return 3;
+		default:
+		    *ptr = 0;
+	    	xpperror("logic block does not exist", RED, DEFAULT, true, false);
 	    return -1;
     }
 }
@@ -547,82 +542,85 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
     inode ptrinode;
     unsigned int ptr, pptr;
     leer_inodo(ninode, &ptrinode);
+
     int rank = get_block_rank(&ptrinode, logicblock, &ptr);
     bool update_inode = false;
+
     if (rank == 0) {
-	if(ptr == 0){
-	    if(!reserve) return FALLO;
-	    ptr = reservar_bloque();
-	    #if DBGLVL4
-	    xpprint("\n[ translate_inode_block() -> inode.directPointers[%d] = %d ]", GRAY, DEFAULT, false, false, logicblock, ptr);
-	    #endif
-	    ptrinode.directPointers[logicblock] = ptr;
-	    ptrinode.usedBlocks++;
-	    ptrinode.ctime = time(NULL);
-	    update_inode = true;
-	}
-    }
-    else{
-	unsigned int buffer[NPOINTERS];
-	memset(buffer, 0, BLOCKSIZE);
-	unsigned int block;
-	int blvl = rank;
-	int arr = 0;
-	while(rank>0){
-	    switch(rank + arr){
-		case 3:
-		    block = (logicblock-INDIRECT1)/(256*256);
-		    break;
-		case 2:
-		    block = ((logicblock-INDIRECT0)/256)%256;
-		    break;
-		case 1:
-		    block = (logicblock-DIRECT)%256;
-		    break;
-	    }
-	    if(ptr == 0){
-		if(!reserve) return FALLO;
-		ptr = reservar_bloque();
-		if (rank==blvl && !arr) {
-		    ptrinode.indirectPointers[rank-1] = ptr;
-		    #if DBGLVL4
-		    xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank, ptr);
-		    #endif
+		if(ptr == 0){
+	    	if(!reserve) return FALLO;
+	    	ptr = reservar_bloque();
+	    	#if DBGLVL4
+	    	xpprint("\n[ translate_inode_block() -> inode.directPointers[%d] = %d ]", GRAY, DEFAULT, false, false, logicblock, ptr);
+	    	#endif
+	    	ptrinode.directPointers[logicblock] = ptr;
+	    	ptrinode.usedBlocks++;
+	    	ptrinode.ctime = time(NULL);
+	    	update_inode = true;
 		}
-		else{
-		    buffer[block] = ptr;
-		    #if DBGLVL4
-		    xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
-		    #endif
-		    bwrite(pptr, buffer);
-		}
+    } else{
+		unsigned int buffer[NPOINTERS];
 		memset(buffer, 0, BLOCKSIZE);
-		ptrinode.usedBlocks++;
-		ptrinode.ctime = time(NULL);
-		update_inode = true;
-	    }
-	    else{
-		if (blvl == rank){rank++; arr=1;}
-		bread(ptr, buffer);
-	    }
-	    pptr = ptr;
-	    ptr = buffer[block];
-	    rank--;
-	}
-	if (ptr==0){
-	    if (!arr){
-		ptr = reservar_bloque();
-		buffer[block] = ptr;
-		#if DBGLVL4
-		xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
-		#endif
-		bwrite(pptr, buffer);
-		ptrinode.usedBlocks++;
-		ptrinode.ctime = time(NULL);
-		update_inode = true;
-	    }
-	    else ptr = pptr;
-	}
+		unsigned int block;
+		int blvl = rank;
+		int arr = 0;
+
+		while(rank>0){
+	    	switch(rank + arr){
+				case 3:
+		    		block = (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
+		    		break;
+				case 2:
+		    		block = ((logicblock-INDIRECT0)/NPOINTERS)%NPOINTERS;
+		    		break;
+				case 1:
+		    		block = (logicblock-DIRECT)%NPOINTERS;
+		    		break;
+	    	}
+		    if(ptr == 0){
+				if(!reserve) return FALLO;
+				ptr = reservar_bloque();
+
+				if (rank==blvl && !arr) {
+					//Primer bloque de este rango: puntero indirecto del inodo
+		    		ptrinode.indirectPointers[rank-1] = ptr;
+		    		#if DBGLVL4
+		    		xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank, ptr);
+		    		#endif
+				} else{
+			    	buffer[block] = ptr;
+			    	#if DBGLVL4
+		    		xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+		    		#endif
+		    		bwrite(pptr, buffer);
+				}
+				memset(buffer, 0, BLOCKSIZE);
+				ptrinode.usedBlocks++;
+				ptrinode.ctime = time(NULL);
+				update_inode = true;
+		    } else{
+				if (blvl == rank){
+					rank++; arr=1;
+				}
+				bread(ptr, buffer);
+	    	}
+		    pptr = ptr;
+		    ptr = buffer[block];
+	    	rank--;
+		}
+		if (ptr==0){
+	    	if (!arr){
+				ptr = reservar_bloque();
+				buffer[block] = ptr;
+				#if DBGLVL4
+				xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+				#endif
+				bwrite(pptr, buffer);
+				ptrinode.usedBlocks++;
+				ptrinode.ctime = time(NULL);
+				update_inode = true;
+		    } else ptr = pptr;
+		}
     }
     if (update_inode) escribir_inodo(ninode, &ptrinode);
     return ptr;
