@@ -88,6 +88,12 @@ int main(int argc, char **argv){
 	last_inode = ibuff[ii].directPointers[0];
 	if (ibuff[ii].directPointers[0] == UINT_MAX || prev_inode == last_inode){printf("\x1b[4D\x1b[0K");break;} //parar y borrar la última flecha
     }
+    
+    int logic_blocks[] = {8, 204, 30004, 400004, 468750};
+    int inode = reservar_inodo('l', 7);
+    for (int i = 0; i<sizeof(logic_blocks)/sizeof(int); i++){
+	printf("\nreserved block %d for logic block %d", translate_inode_block(inode, logic_blocks[i], true), logic_blocks[i]);
+    }
     //Desmontamos el disco
     bumount();
 }

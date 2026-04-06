@@ -1,10 +1,17 @@
 #include <time.h>
 #include <limits.h>
+#include <stdbool.h>
 
 #define SBPOS 0 //El superbloque se escribe en el primer bloque de nuestro FS
 #define SBSIZE 1
 #define INODESIZE 128 //tamaño en bytes de un inodo
 
+#define NPOINTERS (BLOCKSIZE / sizeof(unsigned int))   // 256 punteros por bloque
+#define DIRECT 12
+#define INDIRECT0 (NPOINTERS + DIRECT)    // 268
+#define INDIRECT1 (NPOINTERS * NPOINTERS + INDIRECT0)    // 65.804
+#define INDIRECT2 (NPOINTERS * NPOINTERS * NPOINTERS + INDIRECT1) // 16.843.020
+#define DBGLVL4 1									//
 typedef struct{
    unsigned int startMB; //Posición absoluta del primer bloque del mada de bits
    unsigned int endMB; //Posición absoluta del último bloque del mapa de bits
@@ -65,3 +72,5 @@ int liberar_bloque(unsigned int nbloque);
 int escribir_inodo(unsigned int ninodo, inode *inodo);
 int leer_inodo(unsigned int ninodo, inode *inodo);
 int reservar_inodo(unsigned char tipo, unsigned char permisos);
+int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr);
+int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool reserve);
