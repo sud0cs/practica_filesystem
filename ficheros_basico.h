@@ -1,3 +1,4 @@
+#include "bloques.h"
 #include <time.h>
 #include <limits.h>
 #include <stdbool.h>

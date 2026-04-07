@@ -155,20 +155,19 @@ int initAI(int nblocks){
     
 	//Recorremos todos los inodos del sistema
 	while(icount<SB.totalInodes){
-		for(int i = 0; i<sz; i++){
-	    	icount++;
+		for(int i = 0; i<sz && icount<SB.totalInodes; i++){
 	    	if(icount<SB.totalInodes){
 				//Inodo libre -> enlazado al siguiente
 				inodes[i].type = 'l';
-				inodes[i].directPointers[0] = icount;
+				inodes[i].directPointers[0] = icount + 1;
 	    	} else{
 				//Último inodo -> apunta a NULL (UINT_MAX)
 				inodes[i].type = 'l';
 				inodes[i].directPointers[0] = UINT_MAX;
 				break;
 	    	}
+			icount++;
 		}
-
 		//Escribe el bloque de inodos al disco
 		bwrite(SB.startAI + bcount, inodes);
 		bcount++;
@@ -502,23 +501,22 @@ int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
 		// logicblock se encuentra en el rango 0 - DIRECT
 		// NOTA: No todos los compiladores pueden compilar esta sintaxi
 		// GCC que es el que usamos en esta asignatura si lo acepta
-		case 0 ... DIRECT:
+		case 0 ... DIRECT-1: //0..11
 	    	*ptr = ptrinode -> directPointers[logicblock];
 	    	return 0;
-		//logicblock se encuentra en el rango DIRECT + 1 - INDIRECT1
-		case DIRECT+1 ... INDIRECT0:
+		case DIRECT ... INDIRECT0-1: //12...267
 	    	*ptr = ptrinode -> indirectPointers[0];
 	    	return 1;
-		case INDIRECT0+1 ... INDIRECT1:
+		case INDIRECT0 ... INDIRECT1-1: //268..65803
 	    	*ptr = ptrinode -> indirectPointers[1];
 	    	return 2;
-		case INDIRECT1+1 ... INDIRECT2:
+		case INDIRECT1 ... INDIRECT2-1: //65804..16843019
 		    *ptr = ptrinode -> indirectPointers[2];
 	    	return 3;
 		default:
 		    *ptr = 0;
 	    	xpperror("logic block does not exist", RED, DEFAULT, true, false);
-	    return -1;
+	    	return -1;
     }
 }
 

@@ -22,6 +22,11 @@
 int main(int argc, char **argv){
     superblock SB;
 
+    if(argc != 2){
+        fprintf(stderr, "Sintaxis: leer_sf <disco>\n");
+        return FALLO;
+    }
+
     //Intentamos montar el disco vitual
     if (bmount(argv[1]) == FALLO){
 	    xpperror("Could not mount disk", RED, DEFAULT, true, false);
@@ -49,51 +54,7 @@ int main(int argc, char **argv){
     xpprint("# ", SALMON, DEFAULT, false, false);xpprint("totalInodes",PINK, DEFAULT, true, false);printf(": %d\n", SB.totalInodes);
 
     xpprint("##########################################", SALMON, DEFAULT, false, false);
-
-    /*
-     * Impresión de tamaños de estructuras
-     * Se muestra sizeof(superblock) y siceof(inode) para comprobar que coinciden con:
-     *   - superblock = 1024 bytes
-     *   - inode = 128 bytes
-    */
-    xpprint("\n\n###############", GREEN, DEFAULT, false, false);
-    xpprint(" STRUCT SIZES ", DEFAULT, DEFAULT, true, false);
-    xpprint("###############\n", GREEN, DEFAULT, false, false);
-
-    xpprint("# ", GREEN, DEFAULT, false, false);xpprint("Sizeof superblock", LIGHT_GREEN, DEFAULT, true, false);printf(": %lu\n", sizeof(superblock));
-    xpprint("# ", GREEN, DEFAULT, false, false);xpprint("Sizeof inode", LIGHT_GREEN, DEFAULT, true, false);printf( ": %lu\n", sizeof(inode));
-
-    xpprint("############################################\n", GREEN, DEFAULT, false, false);
     
-    /*
-     * Recorrido de la lista de inodos libres.
-     * Se recorre el array de inodos para comprobar que:
-     *   - initAI() enlazo correctamente todos los indos libres
-     *   - Cada inodo apunta al siguente
-     *   - El último apunta a UINT_MAX
-    */
-    printf("\nCHAINED INODES CHECK\n\n");
-    int ni = BLOCKSIZE/INODESIZE;
-    inode ibuff[ni];
-    int last_inode = SB.firstFreeInode;
-    int prev_inode = SB.firstFreeInode;
-    //Recorre todos los inodos 
-    while(true){
-	int bn = last_inode/ni; //block number
-	int ii = last_inode%ni; //inode index (indice del inodo en el buffer de inodos / bloque)
-	bread(SB.startAI+bn, ibuff);
-	printf("%d", last_inode);
-	xpprint(" -> ", 60, DEFAULT, true, false);
-	prev_inode = last_inode;
-	last_inode = ibuff[ii].directPointers[0];
-	if (ibuff[ii].directPointers[0] == UINT_MAX || prev_inode == last_inode){printf("\x1b[4D\x1b[0K");break;} //parar y borrar la última flecha
-    }
-    
-    int logic_blocks[] = {8, 204, 30004, 400004, 468750};
-    int inode = reservar_inodo('l', 7);
-    for (int i = 0; i<sizeof(logic_blocks)/sizeof(int); i++){
-	printf("\nreserved block %d for logic block %d", translate_inode_block(inode, logic_blocks[i], true), logic_blocks[i]);
-    }
     //Desmontamos el disco
     bumount();
 }
