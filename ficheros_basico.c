@@ -597,9 +597,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 				ptrinode.ctime = time(NULL);
 				update_inode = true;
 		    } else{
-				if (blvl == rank){
-					rank++; arr=1;
-				}
+				if (blvl == rank)arr=1;
 				bread(ptr, buffer);
 	    	}
 		    pptr = ptr;
