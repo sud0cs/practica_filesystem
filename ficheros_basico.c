@@ -563,7 +563,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		int blvl = rank;
 		int arr = 0;
 
-		while(rank>0){
+		while(rank + arr>0){
 	    	switch(rank + arr){
 				case 3:
 		    		block = (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
@@ -582,8 +582,9 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 				if (rank==blvl && !arr) {
 					//Primer bloque de este rango: puntero indirecto del inodo
 		    		ptrinode.indirectPointers[rank-1] = ptr;
+				arr=1;
 		    		#if DBGLVL4
-		    		xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank, ptr);
+		    		xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank-1, ptr);
 		    		#endif
 				} else{
 			    	buffer[block] = ptr;
