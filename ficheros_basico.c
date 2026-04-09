@@ -589,7 +589,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 				} else{
 			    	buffer[block] = ptr;
 			    	#if DBGLVL4
-		    		xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+		    		xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank+1, block, ptr);
 		    		#endif
 		    		bwrite(pptr, buffer);
 				}
