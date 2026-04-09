@@ -549,7 +549,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 	    	if(!reserve) return FALLO;
 	    	ptr = reservar_bloque();
 	    	#if DBGLVL4
-	    	xpprint("\n[ translate_inode_block() -> inode.directPointers[%d] = %d ]", GRAY, DEFAULT, false, false, logicblock, ptr);
+	    	xpperror("[ translate_inode_block() -> inode.directPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, logicblock, ptr);
 	    	#endif
 	    	ptrinode.directPointers[logicblock] = ptr;
 	    	ptrinode.usedBlocks++;
@@ -584,12 +584,12 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		    		ptrinode.indirectPointers[rank-1] = ptr;
 				arr=1;
 		    		#if DBGLVL4
-		    		xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank-1, ptr);
+		    		xpperror("[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank-1, ptr);
 		    		#endif
 				} else{
 			    	buffer[block] = ptr;
 			    	#if DBGLVL4
-		    		xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank+1, block, ptr);
+		    		xpperror("[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank+1, block, ptr);
 		    		#endif
 		    		bwrite(pptr, buffer);
 				}
@@ -598,7 +598,6 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 				ptrinode.ctime = time(NULL);
 				update_inode = true;
 		    } else{
-				if (blvl == rank)arr=1;
 				bread(ptr, buffer);
 	    	}
 		    pptr = ptr;
@@ -610,7 +609,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 				ptr = reservar_bloque();
 				buffer[block] = ptr;
 				#if DBGLVL4
-				xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+				xpperror("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank, block, ptr);
 				#endif
 				bwrite(pptr, buffer);
 				ptrinode.usedBlocks++;
