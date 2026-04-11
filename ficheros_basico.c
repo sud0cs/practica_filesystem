@@ -521,6 +521,20 @@ int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
 }
 
 
+int get_block_index(unsigned int logicblock, int rank){
+    switch(rank){
+	case 3:
+	    return (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
+	case 2:
+	    return ((logicblock-INDIRECT0)/NPOINTERS)%NPOINTERS;
+	case 1:
+	    return (logicblock-DIRECT)%NPOINTERS;
+	default:
+	    return -1;
+    }
+}
+
+
 /**
  * translate_inode_block()
  * ----------------------------------------------------------
@@ -564,17 +578,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		int arr = 0;
 
 		while(rank + arr>0){
-	    	switch(rank + arr){
-				case 3:
-		    		block = (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
-		    		break;
-				case 2:
-		    		block = ((logicblock-INDIRECT0)/NPOINTERS)%NPOINTERS;
-		    		break;
-				case 1:
-		    		block = (logicblock-DIRECT)%NPOINTERS;
-		    		break;
-	    	}
+	    	block = get_block_index(logicblock, rank+arr);
 		    if(ptr == 0){
 				if(!reserve) return FALLO;
 				ptr = reservar_bloque();
@@ -620,4 +624,121 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
     }
     if (update_inode) escribir_inodo(ninode, &ptrinode);
     return ptr;
+}
+int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
+    if (inodo -> logicByteSize == 0) return 0;
+    unsigned int bcount = sbl;
+    unsigned int ptr;
+    int rank;
+    unsigned int ebl = inodo -> logicByteSize%BLOCKSIZE == 0 ? (inodo -> logicByteSize/BLOCKSIZE) - 1 : inodo-> logicByteSize/BLOCKSIZE;
+    unsigned int emptyBuffer[NPOINTERS];
+    unsigned int pointerBlocks[3][NPOINTERS];
+    unsigned int ptrs[3] = {0,0,0};
+    unsigned int blocks[3] = {0,0,0};
+    unsigned int block;
+    int freed = 0;
+    int c_rank;
+    unsigned int jmp;
+    xpperror("liberar bloques from %d to %d\n", BLUE, DEFAULT, true, true, bcount, ebl);
+    memset(emptyBuffer, 0, BLOCKSIZE);
+    
+    while(bcount <= INDIRECT2-1){
+        rank = get_block_rank(inodo, bcount, &ptr);
+        if(rank < 0) return FALLO;    
+        
+        c_rank = rank;
+        while(ptr > 0 && c_rank > 0){
+            block = get_block_index(bcount, c_rank);
+            if (block == 0 || bcount == sbl || ptrs[c_rank-1] != ptr){
+                bread(ptr, pointerBlocks[c_rank-1]);
+            }
+            ptrs[c_rank-1] = ptr;
+            blocks[c_rank-1] = block;
+            ptr = pointerBlocks[c_rank-1][block];
+            c_rank--;
+        }
+        
+        if (ptr > 0){
+            liberar_bloque(ptr);
+            xpperror("-- Liberado el bloque %d para BL %d\n", GRAY, DEFAULT, false, false, ptr, bcount);
+            freed++;
+            if(rank == 0){
+                inodo -> directPointers[bcount] = 0;
+		bcount++;
+            }
+            else{
+                c_rank = 1;
+                while(c_rank <= rank){
+                    block = blocks[c_rank-1];
+                    pointerBlocks[c_rank-1][block] = 0;
+                    ptr = ptrs[c_rank-1];
+                    
+                    if(memcmp(pointerBlocks[c_rank-1], emptyBuffer, BLOCKSIZE) == 0){
+                        liberar_bloque(ptr);
+                        xpperror("Liberado el bloque %d para BL %d\n", GRAY, DEFAULT, false, false, ptr, bcount);
+                        freed++;
+			if(c_rank == rank){
+                            inodo -> indirectPointers[c_rank-1] = 0;
+			    block = c_rank>1?block+1:block;
+                        }
+                        int mult = 1;
+			for(int i = 0;i<c_rank-1;i++)mult*=NPOINTERS;
+			jmp = (NPOINTERS-block)*mult;
+			
+			//blocks[c_rank]+=1;
+			
+			xpperror("jumping %d blocks from %d to %d\n", RED, DEFAULT, false, false, jmp, bcount, jmp+bcount);
+                        bcount+=jmp;
+                        c_rank++;
+                    }
+                    else{
+                        bwrite(ptr, pointerBlocks[c_rank-1]);
+                        break; 
+                    }
+                }
+            }
+        }
+        else{
+	    if(rank>0){
+		c_rank = rank;
+		jmp=0;
+		while(jmp==0 && c_rank>0){
+		    block = blocks[c_rank-1];
+		    while(pointerBlocks[c_rank-1][block+jmp]==0 && block+jmp<NPOINTERS){jmp++;}
+		    int mult = 1;
+		    for(int i = 0;i<c_rank-1;i++)mult*=NPOINTERS;
+		    blocks[c_rank-1] = block+jmp;
+		    jmp*=mult;
+		    c_rank--;
+		}
+		jmp=jmp>0?jmp:1;
+		if(jmp>1)xpperror("jumping %d blocks from %d to %d\n", GREEN, DEFAULT, false, false, jmp, bcount, jmp+bcount);
+		bcount+=jmp;
+	    }
+	    else{
+		bcount++;
+	    }
+	    
+        }
+
+    }
+    
+    xpperror("Freed blocks: %d\n", BLUE, DEFAULT, true, true, freed);
+    return freed;
+}
+
+int liberar_inodo(unsigned int ninodo){
+    superblock SB;
+    bread(SBPOS, &SB);
+    inode inodo;
+    leer_inodo(ninodo, &inodo);
+    int bloques = liberar_bloques_inodo(0, &inodo);
+    inodo.directPointers[0] = SB.firstFreeInode;
+    inodo.type = 'l'; //tipo libre
+    inodo.ctime = time(NULL);
+    escribir_inodo(ninodo, &inodo);
+    SB.freeInodes++;
+    SB.firstFreeInode = ninodo;
+    bwrite(SBPOS, &SB);
+    return bloques;
 }

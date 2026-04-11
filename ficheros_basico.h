@@ -2,6 +2,7 @@
 #include <time.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <math.h>
 
 #define SBPOS 0 //El superbloque se escribe en el primer bloque de nuestro FS
 #define SBSIZE 1
@@ -75,3 +76,5 @@ int leer_inodo(unsigned int ninodo, inode *inodo);
 int reservar_inodo(unsigned char tipo, unsigned char permisos);
 int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr);
 int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool reserve);
+int liberar_bloques_inodo(unsigned int sbl, inode *inodo);
+int liberar_inodo(unsigned int ninodo);

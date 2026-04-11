@@ -164,3 +164,16 @@ int mi_chmod_f(unsigned int ninodo, unsigned char permisos){
 
     return escribir_inodo(ninodo, &in);
 }
+
+int mi_truncar_f(unsigned int ninodo, unsigned int nbytes){
+    inode inodo;
+    leer_inodo(ninodo, &inodo);
+    int sbl = nbytes%BLOCKSIZE==0?nbytes/BLOCKSIZE:nbytes/BLOCKSIZE + 1;
+    int freed = liberar_bloques_inodo(sbl, &inodo);
+    inodo.mtime = time(NULL);
+    inodo.ctime = time(NULL);
+    inodo.logicByteSize = nbytes;
+    inodo.usedBlocks-=freed;
+    escribir_inodo(ninodo, &inodo);
+    return freed;
+}
