@@ -546,15 +546,15 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 
     if (rank == 0) {
 		if(ptr == 0){
-	    	if(!reserve) return FALLO;
-	    	ptr = reservar_bloque();
-	    	#if DBGLVL4
-	    	xpperror("[ translate_inode_block() -> inode.directPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, logicblock, ptr);
-	    	#endif
-	    	ptrinode.directPointers[logicblock] = ptr;
-	    	ptrinode.usedBlocks++;
-	    	ptrinode.ctime = time(NULL);
-	    	update_inode = true;
+	   	if(!reserve) return FALLO;
+	   	ptr = reservar_bloque();
+	   	#if DBGLVL4
+	   	xpperror("[ translate_inode_block() -> inode.directPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, logicblock, ptr);
+	   	#endif
+	   	ptrinode.directPointers[logicblock] = ptr;
+	   	ptrinode.usedBlocks++;
+	   	ptrinode.ctime = time(NULL);
+	   	update_inode = true;
 		}
     } else{
 		unsigned int buffer[NPOINTERS];
@@ -564,48 +564,45 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		int arr = 0;
 
 		while(rank + arr>0){
-	    	switch(rank + arr){
-				case 3:
-		    		block = (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
-		    		break;
-				case 2:
-		    		block = ((logicblock-INDIRECT0)/NPOINTERS)%NPOINTERS;
-		    		break;
-				case 1:
-		    		block = (logicblock-DIRECT)%NPOINTERS;
-		    		break;
-	    	}
-		    if(ptr == 0){
+		if (rank == 0 && ptr != 0) break;
+	   	block = get_block_index(logicblock, rank+arr);
+		   if(ptr == 0){
 				if(!reserve) return FALLO;
 				ptr = reservar_bloque();
 
 				if (rank==blvl && !arr) {
 					//Primer bloque de este rango: puntero indirecto del inodo
-		    		ptrinode.indirectPointers[rank-1] = ptr;
+		   		ptrinode.indirectPointers[rank-1] = ptr;
 				arr=1;
-		    		#if DBGLVL4
-		    		xpperror("[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank-1, ptr);
-		    		#endif
+		   		#if DBGLVL4
+		   		xpperror("[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank-1, ptr);
+		   		#endif
 				} else{
-			    	buffer[block] = ptr;
-			    	#if DBGLVL4
-		    		xpperror("[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank+1, block, ptr);
-		    		#endif
-		    		bwrite(pptr, buffer);
+			   	buffer[block] = ptr;
+			   	#if DBGLVL4
+		   		xpperror("[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank+1, block, ptr);
+		   		#endif
+		   		bwrite(pptr, buffer);
 				}
-				memset(buffer, 0, BLOCKSIZE);
 				ptrinode.usedBlocks++;
 				ptrinode.ctime = time(NULL);
 				update_inode = true;
-		    } else{
+				memset(buffer, 0, BLOCKSIZE);
+		   } else{
+			arr=1;
 				bread(ptr, buffer);
-	    	}
-		    pptr = ptr;
-		    ptr = buffer[block];
-	    	rank--;
+	   	}
+
+		   pptr = ptr;
+		   if (rank > 0) {
+			ptr = buffer[get_block_index(logicblock, rank)];
+		   } else {
+			ptr = 0;
+		   }
+		   rank--;
 		}
 		if (ptr==0){
-	    	if (!arr){
+	   	if (!arr){
 				ptr = reservar_bloque();
 				buffer[block] = ptr;
 				#if DBGLVL4
@@ -615,7 +612,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 				ptrinode.usedBlocks++;
 				ptrinode.ctime = time(NULL);
 				update_inode = true;
-		    } else ptr = pptr;
+		   } else ptr = pptr;
 		}
     }
     if (update_inode) escribir_inodo(ninode, &ptrinode);
