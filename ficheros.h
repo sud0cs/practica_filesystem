@@ -6,17 +6,17 @@
 
 //Estructura STAT(igual que inodo pero sin punteros)
 struct STAT{
-    unsigned char tipo;
-    unsigned char permisos;
+    unsigned char tipo; //'f' ficheros, 'd' directorio
+    unsigned char permisos; //bits rwx(igual que en el inodo)
 
-    time_t atime;
-    time_t mtime;
-    time_t ctime;
-    time_t btime;
+    time_t atime; //ultimo acceso(lectura)
+    time_t mtime; //ultima modificación de datos
+    time_t ctime; //ultimo cambio de metadatos
+    time_t btime; //fecha de creacion
 
-    unsigned int nlinks;
-    unsigned int tamEnBytesLog;
-    unsigned int numBloquesOcupados;
+    unsigned int nlinks; //numero de enlaces duros
+    unsigned int tamEnBytesLog; //tamaño logico del fichero en bytes
+    unsigned int numBloquesOcupados; //numero de bloques fisicos usados
 };
 
 int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offset, unsigned int nbytes);

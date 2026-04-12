@@ -1,4 +1,6 @@
 #include <stdbool.h>
+
+//Enumeración que asigna códigos de color para imprimir texto colorido en el terminal
 typedef enum{
     DEFAULT = -1,
     BLACK = 0,
@@ -22,13 +24,15 @@ typedef enum{
     GRAY = 245
 } Color;
 
+//Estilo de texto
 typedef struct{
-    Color color;
-    Color bgcolor;
-    bool bold;
-    bool underline;
+    Color color; //Color de texto
+    Color bgcolor; //Color de fondo
+    bool bold; //Negrita
+    bool underline; //Subrayado
 } style;
 
+//Define un estilo predeterminado por errores(texto rojo, fondo por defecto, negrita, no subrayada)
 #define ERROR_STYLE (style){RED, DEFAULT, true, false}
 
 char *strpl(char *str, char *fnd, char *rpl, int lim);

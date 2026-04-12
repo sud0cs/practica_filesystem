@@ -3,9 +3,6 @@
 #include "ficheros_basico.h"
 #include <limits.h>
 
-//Superbloque global del sistema de ficheros
-//superblock SB;
-
 /*
  * tamMB()
  * ----------------------------------------------------------
