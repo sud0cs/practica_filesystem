@@ -13,7 +13,9 @@
 #define INDIRECT0 (NPOINTERS + DIRECT)    // 268
 #define INDIRECT1 (NPOINTERS * NPOINTERS + INDIRECT0)    // 65.804
 #define INDIRECT2 (NPOINTERS * NPOINTERS * NPOINTERS + INDIRECT1) // 16.843.020
-#define DBGLVL4 1									//
+#define DBGLVL4 1
+#define DBGLVL6 1
+
 typedef struct{
    unsigned int startMB; //Posición absoluta del primer bloque del mada de bits
    unsigned int endMB; //Posición absoluta del último bloque del mapa de bits

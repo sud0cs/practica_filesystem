@@ -14,7 +14,7 @@ typedef enum{
     LIGHT_BLUE = 81,
     PURPLE = 165,
     ORANGE = 172,
-    LIGHT_GREEN = 192,
+    LIGHT_GREEN = 114,
     PINK = 205,
     LIGHT_RED = 210,
     SALMON = 216,

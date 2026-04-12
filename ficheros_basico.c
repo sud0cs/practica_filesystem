@@ -578,6 +578,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		int arr = 0;
 
 		while(rank + arr>0){
+		if (rank == 0 && ptr != 0) break;
 	    	block = get_block_index(logicblock, rank+arr);
 		    if(ptr == 0){
 				if(!reserve) return FALLO;
@@ -597,16 +598,22 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		    		#endif
 		    		bwrite(pptr, buffer);
 				}
-				memset(buffer, 0, BLOCKSIZE);
 				ptrinode.usedBlocks++;
 				ptrinode.ctime = time(NULL);
 				update_inode = true;
+				memset(buffer, 0, BLOCKSIZE);
 		    } else{
+			arr=1;
 				bread(ptr, buffer);
 	    	}
+
 		    pptr = ptr;
-		    ptr = buffer[block];
-	    	rank--;
+		    if (rank > 0) {
+			ptr = buffer[get_block_index(logicblock, rank)];
+		    } else {
+			ptr = 0;
+		    }
+		    rank--;
 		}
 		if (ptr==0){
 	    	if (!arr){
@@ -639,10 +646,12 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
     int freed = 0;
     int c_rank;
     unsigned int jmp;
-    xpperror("liberar bloques from %d to %d\n", BLUE, DEFAULT, true, true, bcount, ebl);
+    #if DBGLVL6
+    xpperror("[liberar_bloques_inodo() -> liberar bloques desde %d hasta %d]\n", LIGHT_GREEN, DEFAULT, true, false, bcount, ebl);
+    #endif
     memset(emptyBuffer, 0, BLOCKSIZE);
     
-    while(bcount <= INDIRECT2-1){
+    while(bcount <= ebl){
         rank = get_block_rank(inodo, bcount, &ptr);
         if(rank < 0) return FALLO;    
         
@@ -660,8 +669,10 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
         
         if (ptr > 0){
             liberar_bloque(ptr);
-            xpperror("-- Liberado el bloque %d para BL %d\n", GRAY, DEFAULT, false, false, ptr, bcount);
-            freed++;
+	    #if DBGLVL6
+	    xpperror("[liberar_bloques_inodo() -> Liberado el bloque %d para BL %d]\n", GRAY, DEFAULT, false, false, ptr, bcount);
+            #endif
+	    freed++;
             if(rank == 0){
                 inodo -> directPointers[bcount] = 0;
 		bcount++;
@@ -675,8 +686,10 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
                     
                     if(memcmp(pointerBlocks[c_rank-1], emptyBuffer, BLOCKSIZE) == 0){
                         liberar_bloque(ptr);
-                        xpperror("Liberado el bloque %d para BL %d\n", GRAY, DEFAULT, false, false, ptr, bcount);
-                        freed++;
+			#if DBGLVL6
+                        xpperror("[liberar_bloques_inodo() -> Liberado el bloque %d para BL %d]\n", GRAY, DEFAULT, false, false, ptr, bcount);
+			#endif
+			freed++;
 			if(c_rank == rank){
                             inodo -> indirectPointers[c_rank-1] = 0;
 			    block = c_rank>1?block+1:block;
@@ -684,11 +697,11 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
                         int mult = 1;
 			for(int i = 0;i<c_rank-1;i++)mult*=NPOINTERS;
 			jmp = (NPOINTERS-block)*mult;
-			
-			//blocks[c_rank]+=1;
-			
-			xpperror("jumping %d blocks from %d to %d\n", RED, DEFAULT, false, false, jmp, bcount, jmp+bcount);
-                        bcount+=jmp;
+
+			#if DBGLVL6
+			xpperror("[liberar_bloques_inodo() -> saltando %d bloques desde %d hasta %d]\n", LIGHT_GREEN, DEFAULT, false, false, jmp, bcount, jmp+bcount);
+			#endif
+			bcount+=jmp;
                         c_rank++;
                     }
                     else{
@@ -712,7 +725,9 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
 		    c_rank--;
 		}
 		jmp=jmp>0?jmp:1;
-		if(jmp>1)xpperror("jumping %d blocks from %d to %d\n", GREEN, DEFAULT, false, false, jmp, bcount, jmp+bcount);
+		#if DBGLVL6
+		xpperror("[liberar_bloques_inodo() -> saltando %d bloques desde %d hasta %d]\n", LIGHT_RED, DEFAULT, false, false, jmp, bcount, jmp+bcount);
+		#endif
 		bcount+=jmp;
 	    }
 	    else{
@@ -722,8 +737,9 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
         }
 
     }
-    
-    xpperror("Freed blocks: %d\n", BLUE, DEFAULT, true, true, freed);
+    #if DBGLVL6
+    xpperror("[liberar_bloques_inodo() -> bloques liberados: %d]\n", BLUE, DEFAULT, true, true, freed);
+    #endif
     return freed;
 }
 
@@ -736,6 +752,8 @@ int liberar_inodo(unsigned int ninodo){
     inodo.directPointers[0] = SB.firstFreeInode;
     inodo.type = 'l'; //tipo libre
     inodo.ctime = time(NULL);
+    inodo.logicByteSize = 0;
+    inodo.usedBlocks-=bloques;
     escribir_inodo(ninodo, &inodo);
     SB.freeInodes++;
     SB.firstFreeInode = ninodo;
