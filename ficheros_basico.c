@@ -496,7 +496,7 @@ int reservar_inodo(unsigned char tipo, unsigned char permisos){
 int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
     switch(logicblock){
 		// logicblock se encuentra en el rango 0 - DIRECT
-		// NOTA: No todos los compiladores pueden compilar esta sintaxi
+		// NOTA: No todos los compiladores pueden compilar esta sintaxis
 		// GCC que es el que usamos en esta asignatura si lo acepta
 		case 0 ... DIRECT-1: //0..11
 	    	*ptr = ptrinode -> directPointers[logicblock];
@@ -517,7 +517,20 @@ int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
     }
 }
 
-
+/**
+ * get_block_index()
+ * ----------------------------------------------------------
+ * Dado un bloque lógico calcula su posición relativa al
+ * bloque de punteros correspondiente a un nivel
+ * 
+ * parámetros:
+ *  logicblock -> número de bloque lógico
+ *  rank -> nivel del bloque de puntreos
+ *
+ * devuelve:
+ *  posición relativa al bloque de punteros
+ *
+ */
 int get_block_index(unsigned int logicblock, int rank){
     switch(rank){
 	case 3:
@@ -629,6 +642,21 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
     if (update_inode) escribir_inodo(ninode, &ptrinode);
     return ptr;
 }
+
+/**
+ * liberar_bloques_inodo()
+ * ----------------------------------------------------------
+ * libera todos los bloques del inodo a partir de un bloque lógico
+ * dado
+ * 
+ * parámetros:
+ *  sbl -> número de bloque lógico
+ *  inode -> inodo del cual liberar los bloques
+ *
+ * devuelve:
+ *  Número de bloques liberados
+ *
+ */
 int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
     if (inodo -> logicByteSize == 0) return 0;
     unsigned int bcount = sbl;
@@ -740,6 +768,19 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
     return freed;
 }
 
+/**
+ * liberar_inodo()
+ * ----------------------------------------------------------
+ * libera todos los bloques del inodo y lo "devuelve" a la lista
+ * de inodos libres
+ *
+ * parámetros:
+ *  ninodo -> identificados del inodo
+ *
+ * devuelve:
+ *  Número de bloques liberados
+ *
+ */
 int liberar_inodo(unsigned int ninodo){
     superblock SB;
     bread(SBPOS, &SB);
