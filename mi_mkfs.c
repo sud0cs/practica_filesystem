@@ -2,6 +2,25 @@
 #include "bloques.h"
 #include "ficheros_basico.h"
 
+/*
+ * main()
+ * ----------------------------------------------------------
+ * Crea y inicializa un disco virtual completo.
+ * Convierte los argumentos de entrada, crea un fichero que acctuara como disco virtual,
+ * escribe todos los blqoues a 0, incialitza superbloque, mapa de bits y array de inodos
+ * y finalmente reserva el inodo raiz.
+ * 
+ * Paramétros:
+ *  argc: numero de argumentos
+ *  argv: vector de argumentos
+ *           argv[1] = nombre del disco
+ *           argv[2] = nombre de bloques
+ * 
+ * Devuelve:
+ *  EXITO(0): si todo ha ido bien
+ *  FALLO(-1): si hay algun error
+ * 
+*/
 int main(int argc, char **argv){
   //Convertimos el segundo argumento a entero: numero de bloques del disco
   int nblocks = atoi(argv[2]);

@@ -3,9 +3,6 @@
 #include "ficheros_basico.h"
 #include <limits.h>
 
-//Superbloque global del sistema de ficheros
-//superblock SB;
-
 /*
  * tamMB()
  * ----------------------------------------------------------
@@ -155,20 +152,19 @@ int initAI(int nblocks){
     
 	//Recorremos todos los inodos del sistema
 	while(icount<SB.totalInodes){
-		for(int i = 0; i<sz; i++){
-	    	icount++;
+		for(int i = 0; i<sz && icount<SB.totalInodes; i++){
 	    	if(icount<SB.totalInodes){
 				//Inodo libre -> enlazado al siguiente
 				inodes[i].type = 'l';
-				inodes[i].directPointers[0] = icount;
+				inodes[i].directPointers[0] = icount + 1;
 	    	} else{
 				//Último inodo -> apunta a NULL (UINT_MAX)
 				inodes[i].type = 'l';
 				inodes[i].directPointers[0] = UINT_MAX;
 				break;
 	    	}
+			icount++;
 		}
-
 		//Escribe el bloque de inodos al disco
 		bwrite(SB.startAI + bcount, inodes);
 		bcount++;
@@ -500,24 +496,50 @@ int reservar_inodo(unsigned char tipo, unsigned char permisos){
 int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
     switch(logicblock){
 		// logicblock se encuentra en el rango 0 - DIRECT
-		// NOTA: No todos los compiladores pueden compilar esta sintaxi
+		// NOTA: No todos los compiladores pueden compilar esta sintaxis
 		// GCC que es el que usamos en esta asignatura si lo acepta
-		case 0 ... DIRECT:
+		case 0 ... DIRECT-1: //0..11
 	    	*ptr = ptrinode -> directPointers[logicblock];
 	    	return 0;
-		//logicblock se encuentra en el rango DIRECT + 1 - INDIRECT1
-		case DIRECT+1 ... INDIRECT0:
+		case DIRECT ... INDIRECT0-1: //12...267
 	    	*ptr = ptrinode -> indirectPointers[0];
 	    	return 1;
-		case INDIRECT0+1 ... INDIRECT1:
+		case INDIRECT0 ... INDIRECT1-1: //268..65803
 	    	*ptr = ptrinode -> indirectPointers[1];
 	    	return 2;
-		case INDIRECT1+1 ... INDIRECT2:
+		case INDIRECT1 ... INDIRECT2-1: //65804..16843019
 		    *ptr = ptrinode -> indirectPointers[2];
 	    	return 3;
 		default:
 		    *ptr = 0;
 	    	xpperror("logic block does not exist", RED, DEFAULT, true, false);
+	    	return -1;
+    }
+}
+
+/**
+ * get_block_index()
+ * ----------------------------------------------------------
+ * Dado un bloque lógico calcula su posición relativa al
+ * bloque de punteros correspondiente a un nivel
+ * 
+ * parámetros:
+ *  logicblock -> número de bloque lógico
+ *  rank -> nivel del bloque de puntreos
+ *
+ * devuelve:
+ *  posición relativa al bloque de punteros
+ *
+ */
+int get_block_index(unsigned int logicblock, int rank){
+    switch(rank){
+	case 3:
+	    return (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
+	case 2:
+	    return ((logicblock-INDIRECT0)/NPOINTERS)%NPOINTERS;
+	case 1:
+	    return (logicblock-DIRECT)%NPOINTERS;
+	default:
 	    return -1;
     }
 }
@@ -551,7 +573,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 	    	if(!reserve) return FALLO;
 	    	ptr = reservar_bloque();
 	    	#if DBGLVL4
-	    	xpprint("\n[ translate_inode_block() -> inode.directPointers[%d] = %d ]", GRAY, DEFAULT, false, false, logicblock, ptr);
+	    	xpperror("[ translate_inode_block() -> inode.directPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, logicblock, ptr);
 	    	#endif
 	    	ptrinode.directPointers[logicblock] = ptr;
 	    	ptrinode.usedBlocks++;
@@ -565,18 +587,9 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		int blvl = rank;
 		int arr = 0;
 
-		while(rank>0){
-	    	switch(rank + arr){
-				case 3:
-		    		block = (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
-		    		break;
-				case 2:
-		    		block = ((logicblock-INDIRECT0)/NPOINTERS)%NPOINTERS;
-		    		break;
-				case 1:
-		    		block = (logicblock-DIRECT)%NPOINTERS;
-		    		break;
-	    	}
+		while(rank + arr>0){
+		if (rank == 0 && ptr != 0) break;
+	    	block = get_block_index(logicblock, rank+arr);
 		    if(ptr == 0){
 				if(!reserve) return FALLO;
 				ptr = reservar_bloque();
@@ -584,36 +597,40 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 				if (rank==blvl && !arr) {
 					//Primer bloque de este rango: puntero indirecto del inodo
 		    		ptrinode.indirectPointers[rank-1] = ptr;
+				arr=1;
 		    		#if DBGLVL4
-		    		xpprint("\n[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]", GRAY, DEFAULT, false, false, rank, ptr);
+		    		xpperror("[ translate_inode_block() -> inode.indirectPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank-1, ptr);
 		    		#endif
 				} else{
 			    	buffer[block] = ptr;
 			    	#if DBGLVL4
-		    		xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+		    		xpperror("[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank+1, block, ptr);
 		    		#endif
 		    		bwrite(pptr, buffer);
 				}
-				memset(buffer, 0, BLOCKSIZE);
 				ptrinode.usedBlocks++;
 				ptrinode.ctime = time(NULL);
 				update_inode = true;
+				memset(buffer, 0, BLOCKSIZE);
 		    } else{
-				if (blvl == rank){
-					rank++; arr=1;
-				}
+			arr=1;
 				bread(ptr, buffer);
 	    	}
+
 		    pptr = ptr;
-		    ptr = buffer[block];
-	    	rank--;
+		    if (rank > 0) {
+			ptr = buffer[get_block_index(logicblock, rank)];
+		    } else {
+			ptr = 0;
+		    }
+		    rank--;
 		}
 		if (ptr==0){
 	    	if (!arr){
 				ptr = reservar_bloque();
 				buffer[block] = ptr;
 				#if DBGLVL4
-				xpprint("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]", GRAY, DEFAULT, false, false, rank, block, ptr);
+				xpperror("\n[ translate_inode_block() -> inode.rank_%d_pointer[%d] = %d ]\n", GRAY, DEFAULT, false, false, rank, block, ptr);
 				#endif
 				bwrite(pptr, buffer);
 				ptrinode.usedBlocks++;
@@ -624,4 +641,160 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
     }
     if (update_inode) escribir_inodo(ninode, &ptrinode);
     return ptr;
+}
+
+/**
+ * liberar_bloques_inodo()
+ * ----------------------------------------------------------
+ * libera todos los bloques del inodo a partir de un bloque lógico
+ * dado
+ * 
+ * parámetros:
+ *  sbl -> número de bloque lógico
+ *  inode -> inodo del cual liberar los bloques
+ *
+ * devuelve:
+ *  Número de bloques liberados
+ *
+ */
+int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
+    if (inodo -> logicByteSize == 0) return 0;
+    unsigned int bcount = sbl;
+    unsigned int ptr;
+    int rank;
+    unsigned int ebl = inodo -> logicByteSize%BLOCKSIZE == 0 ? (inodo -> logicByteSize/BLOCKSIZE) - 1 : inodo-> logicByteSize/BLOCKSIZE;
+    unsigned int emptyBuffer[NPOINTERS];
+    unsigned int pointerBlocks[3][NPOINTERS];
+    unsigned int ptrs[3] = {0,0,0};
+    unsigned int blocks[3] = {0,0,0};
+    unsigned int block;
+    int freed = 0;
+    int c_rank;
+    unsigned int jmp;
+    #if DBGLVL6
+    xpperror("[liberar_bloques_inodo() -> liberar bloques desde %d hasta %d]\n", LIGHT_GREEN, DEFAULT, true, false, bcount, ebl);
+    #endif
+    memset(emptyBuffer, 0, BLOCKSIZE);
+    
+    while(bcount <= ebl){
+        rank = get_block_rank(inodo, bcount, &ptr);
+        if(rank < 0) return FALLO;    
+        
+        c_rank = rank;
+        while(ptr > 0 && c_rank > 0){
+            block = get_block_index(bcount, c_rank);
+            if (block == 0 || bcount == sbl || ptrs[c_rank-1] != ptr){
+                bread(ptr, pointerBlocks[c_rank-1]);
+            }
+            ptrs[c_rank-1] = ptr;
+            blocks[c_rank-1] = block;
+            ptr = pointerBlocks[c_rank-1][block];
+            c_rank--;
+        }
+        
+        if (ptr > 0){
+            liberar_bloque(ptr);
+	    #if DBGLVL6
+	    xpperror("[liberar_bloques_inodo() -> Liberado el bloque %d para BL %d]\n", GRAY, DEFAULT, false, false, ptr, bcount);
+            #endif
+	    freed++;
+            if(rank == 0){
+                inodo -> directPointers[bcount] = 0;
+		bcount++;
+            }
+            else{
+                c_rank = 1;
+                while(c_rank <= rank){
+                    block = blocks[c_rank-1];
+                    pointerBlocks[c_rank-1][block] = 0;
+                    ptr = ptrs[c_rank-1];
+                    
+                    if(memcmp(pointerBlocks[c_rank-1], emptyBuffer, BLOCKSIZE) == 0){
+                        liberar_bloque(ptr);
+			#if DBGLVL6
+                        xpperror("[liberar_bloques_inodo() -> Liberado el bloque %d para BL %d]\n", GRAY, DEFAULT, false, false, ptr, bcount);
+			#endif
+			freed++;
+			if(c_rank == rank){
+                            inodo -> indirectPointers[c_rank-1] = 0;
+			    block = c_rank>1?block+1:block;
+                        }
+                        int mult = 1;
+			for(int i = 0;i<c_rank-1;i++)mult*=NPOINTERS;
+			jmp = (NPOINTERS-block)*mult;
+
+			#if DBGLVL6
+			xpperror("[liberar_bloques_inodo() -> saltando %d bloques desde %d hasta %d]\n", LIGHT_GREEN, DEFAULT, false, false, jmp, bcount, jmp+bcount);
+			#endif
+			bcount+=jmp;
+                        c_rank++;
+                    }
+                    else{
+                        bwrite(ptr, pointerBlocks[c_rank-1]);
+                        break; 
+                    }
+                }
+            }
+        }
+        else{
+	    if(rank>0){
+		c_rank = rank;
+		jmp=0;
+		while(jmp==0 && c_rank>0){
+		    block = blocks[c_rank-1];
+		    while(pointerBlocks[c_rank-1][block+jmp]==0 && block+jmp<NPOINTERS){jmp++;}
+		    int mult = 1;
+		    for(int i = 0;i<c_rank-1;i++)mult*=NPOINTERS;
+		    blocks[c_rank-1] = block+jmp;
+		    jmp*=mult;
+		    c_rank--;
+		}
+		jmp=jmp>0?jmp:1;
+		#if DBGLVL6
+		xpperror("[liberar_bloques_inodo() -> saltando %d bloques desde %d hasta %d]\n", LIGHT_RED, DEFAULT, false, false, jmp, bcount, jmp+bcount);
+		#endif
+		bcount+=jmp;
+	    }
+	    else{
+		bcount++;
+	    }
+	    
+        }
+
+    }
+    #if DBGLVL6
+    xpperror("[liberar_bloques_inodo() -> bloques liberados: %d]\n", BLUE, DEFAULT, true, true, freed);
+    #endif
+    return freed;
+}
+
+/**
+ * liberar_inodo()
+ * ----------------------------------------------------------
+ * libera todos los bloques del inodo y lo "devuelve" a la lista
+ * de inodos libres
+ *
+ * parámetros:
+ *  ninodo -> identificados del inodo
+ *
+ * devuelve:
+ *  Número de bloques liberados
+ *
+ */
+int liberar_inodo(unsigned int ninodo){
+    superblock SB;
+    bread(SBPOS, &SB);
+    inode inodo;
+    leer_inodo(ninodo, &inodo);
+    int bloques = liberar_bloques_inodo(0, &inodo);
+    inodo.directPointers[0] = SB.firstFreeInode;
+    inodo.type = 'l'; //tipo libre
+    inodo.ctime = time(NULL);
+    inodo.logicByteSize = 0;
+    inodo.usedBlocks-=bloques;
+    escribir_inodo(ninodo, &inodo);
+    SB.freeInodes++;
+    SB.firstFreeInode = ninodo;
+    bwrite(SBPOS, &SB);
+    return bloques;
 }

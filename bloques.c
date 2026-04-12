@@ -9,7 +9,7 @@ static int descriptor = 0;
  * ----------------------------------------------------------
  * Abre(o crea) el fichero que hará de disco virtual.
  * - O_RWD: Permite leer y escribir
- * - O_CREAT: Crea el fichero si no existe
+ * - O_CREAT: Crea el fichero si no existe con los permisos 0666
  * - 0666: permisos rrw-rw-rw
  * 
  * Parámetros:
@@ -27,7 +27,7 @@ int bmount(const char *camino){
         pperror("Error en bmount(): %s\n", &ERROR_STYLE, strerror(errno));
         return FALLO;
     }
-    return descriptor; //Devuelve el desccriptor del disco virtual
+    return descriptor; //Devuelve el descriptor del disco virtual
 }
 
 /*
@@ -41,7 +41,7 @@ int bmount(const char *camino){
  *   FALLO(-1) si hay error
 */
 int bumount(){
-    //Si descriptor es 0, significa que no no se ha abierto ningun disco
+    //Si descriptor es 0, significa que no se ha abierto ningun disco
     if(descriptor == 0){
         xpperror("Advertencia: bumount() llamado sin bmount()\n", YELLOW, DEFAULT, true, false);
         return FALLO;
@@ -60,18 +60,18 @@ int bumount(){
 /*
  * bwrite()
  * ----------------------------------------------------------
- * Escribe un bloque completo (BLOCKSIZE byte) al dispositivo virtual.
+ * Escribe un bloque completo (BLOCKSIZE byte) al dispositivo virtual(bloc físic nbloque).
  * Primero movemos el puntero del fichero con lseek(), después escribimos BLOCKSIZE bytes con write()
  * 
  * Parámetros:
  *   nbloque -> número de bloque físico a escribir
- *   buf -> buffer de memoria con con los datos(BLOCKSIZE bytes)
+ *   buf -> buffer de memoria con los datos(BLOCKSIZE bytes)
  * Devuelve:
  *   BLOCKSIZE si es correcto
  *   ERROR (-1) si hay error
 */
 int bwrite(unsigned int nbloque, const void *buf){
-    //Nos situamos en el byte incial del bloque nbloque
+    //Nos situamos en el byte inicial del bloque nbloque (mueve el puntero del fichero)
     if(lseek(descriptor, nbloque * BLOCKSIZE, SEEK_SET) == -1){
         pperror("Error en bwrite() -> lseek(): %s\n", &ERROR_STYLE, strerror(errno));
         return FALLO;
