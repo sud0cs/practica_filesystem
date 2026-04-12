@@ -520,6 +520,32 @@ int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr){
     }
 }
 
+/**
+ * get_block_index()
+ * ----------------------------------------------------------
+ * Dado un bloque lógico calcula su posición relativa al
+ * bloque de punteros correspondiente a un nivel
+ * 
+ * parámetros:
+ *  logicblock -> número de bloque lógico
+ *  rank -> nivel del bloque de puntreos
+ *
+ * devuelve:
+ *  posición relativa al bloque de punteros
+ *
+ */
+int get_block_index(unsigned int logicblock, int rank){
+    switch(rank){
+	case 3:
+	   return (logicblock-INDIRECT1)/(NPOINTERS*NPOINTERS);
+	case 2:
+	   return ((logicblock-INDIRECT0)/NPOINTERS)%NPOINTERS;
+	case 1:
+	   return (logicblock-DIRECT)%NPOINTERS;
+	default:
+	   return -1;
+    }
+}
 
 /**
  * translate_inode_block()
