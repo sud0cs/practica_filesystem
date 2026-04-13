@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "bloques.h"
 #include "ficheros_basico.h"
+#include "directorios.h"
 
 /*
  * main()

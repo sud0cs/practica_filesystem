@@ -1,4 +1,4 @@
-#include "ficheros.h"
+#include "directorios.h"
 #include <string.h>
 #include <stdio.h>
 
