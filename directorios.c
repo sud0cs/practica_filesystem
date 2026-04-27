@@ -42,3 +42,37 @@ int extraer_camino(const char *camino, char *inicial, char *final, char *tipo){
     *tipo='d';
     return 1;
 }
+
+int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsigned int *p_inodo, unsigned int *p_entrada, char reservar, unsigned char permisos){
+    entrada entrada;
+    inode inodo_dir;
+    bool found;
+    char tipo;
+    char inicial[sizeof(entrada.nombre)];
+    char final[strlen(camino_parcial)];
+    int cant_entradas_inodo;
+    int num_entrada_inodo;
+
+
+    found = false;
+    if(strcmp(camino_parcial, "/") == 0){
+	*p_inodo = 0;
+	*p_entrada = 0;
+	return 0;
+    }
+
+    if(extraer_camino(camino_parcial, inicial, final, &tipo)<0){
+	return ERROR_CAMINO_INCORRECTO;
+    }
+
+    leer_inodo(*p_inodo_dir, &inodo_dir);
+    int buffer[BLOCKSIZE/sizeof(entrada)];
+
+    //add perms
+
+    int cant_entradas_inodo = inodo_dir.logicByteSize/sizeof(entrada);
+    int num_entradas_inodo = 0;
+    if(cant_entradas_inodo>0){
+	
+    }
+}
