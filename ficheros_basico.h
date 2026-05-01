@@ -1,3 +1,5 @@
+#ifndef FICHEROS_BASICO_H
+#define FICHEROS_BASICO_H
 #include "bloques.h"
 #include <time.h>
 #include <limits.h>
@@ -15,6 +17,10 @@
 #define INDIRECT2 (NPOINTERS * NPOINTERS * NPOINTERS + INDIRECT1) // 16.843.020
 #define DBGLVL4 1
 #define DBGLVL6 1
+
+#define PERM_EXEC 1
+#define PERM_WRITE 2
+#define PERM_READ 4
 
 typedef struct{
    unsigned int startMB; //Posición absoluta del primer bloque del mada de bits
@@ -51,7 +57,7 @@ typedef struct{ //Comprobar que ocupa 128 bytes haciendo un sizeof(inodo)!!!
    /* comprobar que el tamaño del tipo time_t para vuestra plataforma/compilador es 8:
    printf ("sizeof time_t is: %ld\n", sizeof(time_t)); */
 
-   unsigned int nlinks; //Cantidad de enlaces de entraadas enn directorio
+   unsigned int nlinks; //Cantidad de enlaces de entradas en directorio
    unsigned int logicByteSize; //Tamaño en bytes lógicos (EOF)
    unsigned int usedBlocks; //Cantidad de bloques ocupados zona de datos
 
@@ -80,3 +86,5 @@ int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr);
 int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool reserve);
 int liberar_bloques_inodo(unsigned int sbl, inode *inodo);
 int liberar_inodo(unsigned int ninodo);
+bool inode_has_perms(inode *inodo, char perms);
+#endif

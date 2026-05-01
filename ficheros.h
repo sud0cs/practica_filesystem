@@ -1,6 +1,5 @@
 #ifndef FICHEROS_H
 #define FICHEROS_H
-
 #include "ficheros_basico.h"
 #include <time.h>
 

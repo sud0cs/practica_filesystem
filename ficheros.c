@@ -27,7 +27,7 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
     leer_inodo(ninodo, &in);
 
     //Comprobar permisos de escritura (bit 2)
-    if((in.perms & 2) != 2){
+    if(!inode_has_perms(&in, PERM_WRITE)){
         fprintf(stderr, "No hay permisos de escritura\n");
         return FALLO;
     }
@@ -68,7 +68,7 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
             bf = translate_inode_block(ninodo, bl, true);
             if(bf < 0) return FALLO;
 
-            bwrite(bf, (unsigned char *)buf_original + escritos);
+	bwrite(bf, (unsigned char *)buf_original + escritos);
             escritos += BLOCKSIZE;
         }
 
@@ -124,7 +124,7 @@ int mi_read_f(unsigned int ninodo, void *buf_original, unsigned int offset, unsi
     leer_inodo(ninodo, &in);
 
     //Comprobar permisos de lectura (bit 4)
-    if((in.perms & 4) != 4){
+    if(!inode_has_perms(&in, PERM_READ)){
         fprintf(stderr, "No hay permisos de lectura\n");
         return FALLO;
     }

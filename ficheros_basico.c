@@ -798,3 +798,7 @@ int liberar_inodo(unsigned int ninodo){
     bwrite(SBPOS, &SB);
     return bloques;
 }
+
+bool inode_has_perms(inode *inodo, char perms){
+    return (inodo->perms & perms) == perms;
+}

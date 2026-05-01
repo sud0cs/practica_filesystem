@@ -1,4 +1,5 @@
 #include "ficheros.h"
+#include "utils.h"
 #include <string.h>
 
 #define ERROR_CAMINO_INCORRECTO (-2)
@@ -11,10 +12,11 @@
 
 #define TAMNOMBRE 60 //Tamaño del nombre de directorio o fichero, en Ext2 = 256
 
-struct entrada{
+typedef struct{
     char nombre[TAMNOMBRE];
     unsigned int ninodo;
-};
+}entrada;
 
 int extraer_camino(const char *camino, char *inicial, char *final, char *tipo);
 int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsigned int *p_inodo, unsigned int *p_entrada, char reservar, unsigned char permisos);
+void print_dir_error(int error);

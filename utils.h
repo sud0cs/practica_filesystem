@@ -1,3 +1,5 @@
+#ifndef UTILS_H
+#define UTILS_H
 #include <stdbool.h>
 
 //Enumeración que asigna códigos de color para imprimir texto colorido en el terminal
@@ -41,3 +43,4 @@ void pprint(char *str, style *s, ...);
 void xpprint(char *str, Color fg, Color bg, bool bold, bool underline, ...);
 void pperror(char *str, style *s, ...);
 void xpperror(char *str, Color fg, Color bg, bool bold, bool underline, ...);
+#endif
