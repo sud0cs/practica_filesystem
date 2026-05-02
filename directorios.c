@@ -55,7 +55,6 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     int num_entrada_inodo;
     unsigned int offset = 0;
 
-    //xpperror("inodo: %d\n", RED, DEFAULT, true, false, *p_inodo_dir);
     found = false;
     if(strcmp(camino_parcial, "/") == 0){
 	*p_inodo = 0;
@@ -77,9 +76,8 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     num_entrada_inodo = 0;
     if(cant_entradas_inodo>0){
 	while((num_entrada_inodo<cant_entradas_inodo) && found==false){
-	    if(offset%BLOCKSIZE==0)mi_read_f(*p_inodo_dir, buffer, offset, offset+BLOCKSIZE);
+	    if(offset%BLOCKSIZE==0)mi_read_f(*p_inodo_dir, buffer, offset, BLOCKSIZE);
 	    _entrada = buffer[num_entrada_inodo%(sizeof(buffer)/sizeof(entrada))];
-	    //xpperror("offset: %d, ninodo: %d, nombre: %s, buffer[%d]\n", ORANGE, DEFAULT, true, false, offset, _entrada.ninodo, _entrada.nombre, num_entrada_inodo%(sizeof(buffer)/sizeof(entrada)));
 	    if(strcmp(_entrada.nombre, inicial)==0){
 		found = true;
 		*p_entrada = num_entrada_inodo;
@@ -88,11 +86,9 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
 	    num_entrada_inodo++;
 	}
     }
-    //xpperror("entradas: %d | current: %d\n", PURPLE, DEFAULT, true, false,cant_entradas_inodo, num_entrada_inodo);
     if(found==false && num_entrada_inodo==cant_entradas_inodo){
 	if (!reservar) return ERROR_NO_EXISTE_ENTRADA_CONSULTA;
-	//xpperror("tipo: %c, camino: %s, inodo_dir.type: %c, if %d\n", PURPLE, DEFAULT, true, false, tipo, camino_parcial, inodo_dir.type, inodo_dir.type == 'f');
-	if (inodo_dir.type == 'f') return -8;
+	if (inodo_dir.type == 'f') return ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO;
 	if(!inode_has_perms(&inodo_dir, PERM_WRITE)){
 	    return ERROR_PERMISO_ESCRITURA;
 	}
@@ -104,13 +100,10 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
 	else{
 	    _entrada.ninodo = reservar_inodo('f', permisos);
 	}
-	
-	buffer[0] = _entrada;
-	//xpperror("offset: %d, ninodo: %d, nombre: %s, p_inodo_dir: %d\n", YELLOW, DEFAULT, true, false, offset, buffer[0].ninodo, buffer[0].nombre, *p_inodo_dir);
-	mi_write_f(*p_inodo_dir, buffer, offset, sizeof(entrada));
+	xpperror("offset: %d, ninodo: %d, nombre: %s, buffer[%d]\n", ORANGE, DEFAULT, true, false, offset, _entrada.ninodo, _entrada.nombre, num_entrada_inodo%(sizeof(buffer)/sizeof(entrada)));
+	mi_write_f(*p_inodo_dir, &_entrada, offset, sizeof(entrada));
     }
     int l = strlen(final);
-    //xpperror("l: %d\n", BLUE, DEFAULT, true, false, l);
     if(l==0 || (l==1 && final[0] == '/')){
 	if(found && reservar) return ERROR_ENTRADA_YA_EXISTENTE;
 	*p_inodo = _entrada.ninodo;
