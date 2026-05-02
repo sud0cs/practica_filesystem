@@ -147,3 +147,12 @@ void print_dir_error(int error){
 	    break;
     }
 }
+
+int mi_creat(char *path, unsigned char perms){
+    superblock SB;
+    bread(SBPOS, &SB);
+    unsigned int rootInode = SB.rootInode;
+    unsigned int p_inodo = 0;
+    unsigned int p_entrada = 0;
+    return buscar_entrada(path, &rootInode, &p_inodo, &p_entrada, 1, perms);
+}
