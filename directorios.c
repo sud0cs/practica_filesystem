@@ -87,7 +87,6 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     }
     if(found==false && num_entrada_inodo==cant_entradas_inodo){
 	if (!reservar) return ERROR_NO_EXISTE_ENTRADA_CONSULTA;
-	//xpperror("tipo: %c, camino: %s, inodo_dir.type: %c, if %d\n", PURPLE, DEFAULT, true, false, tipo, camino_parcial, inodo_dir.type, inodo_dir.type == 'f');
 	if (inodo_dir.type == 'f') return -8;
 	if(!has_perms(inodo_dir.perms, PERM_WRITE)){
 	    return ERROR_PERMISO_ESCRITURA;
