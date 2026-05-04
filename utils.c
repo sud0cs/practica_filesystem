@@ -148,6 +148,7 @@ char *strpl(char *str, char *fnd, char *rpl, int lim){
 	    pos += sz+lenrpl;
 	  }
   }
-  strncpy(out+pos, rplpospt[oc-1]+lenfnd, lenstr);
+  size_t remaining = lenstr - (rplpospt[oc-1] - str) - lenfnd;
+  if (remaining > 0) memcpy(out + pos, rplpospt[oc-1] + lenfnd, remaining);
   return out;
 }

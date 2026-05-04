@@ -20,3 +20,7 @@ typedef struct{
 int extraer_camino(const char *camino, char *inicial, char *final, char *tipo);
 int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsigned int *p_inodo, unsigned int *p_entrada, char reservar, unsigned char permisos);
 void print_dir_error(int error);
+int mi_creat(char *path, unsigned char perms);
+int mi_dir(const char *camino, char *str);
+int mi_chmod(const char *camino, unsigned char permisos);
+int mi_stat(const char *camino, struct STAT *p_stat);

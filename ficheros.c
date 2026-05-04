@@ -27,7 +27,7 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
     leer_inodo(ninodo, &in);
 
     //Comprobar permisos de escritura (bit 2)
-    if(!inode_has_perms(&in, PERM_WRITE)){
+    if(!has_perms(in.perms, PERM_WRITE)){
         fprintf(stderr, "No hay permisos de escritura\n");
         return FALLO;
     }
@@ -124,7 +124,7 @@ int mi_read_f(unsigned int ninodo, void *buf_original, unsigned int offset, unsi
     leer_inodo(ninodo, &in);
 
     //Comprobar permisos de lectura (bit 4)
-    if(!inode_has_perms(&in, PERM_READ)){
+    if(!has_perms(in.perms, PERM_READ)){
         fprintf(stderr, "No hay permisos de lectura\n");
         return FALLO;
     }

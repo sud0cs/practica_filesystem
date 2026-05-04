@@ -68,7 +68,7 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     }
 
     leer_inodo(*p_inodo_dir, &inodo_dir);
-    if(!inode_has_perms(&inodo_dir, PERM_READ)){
+    if(!has_perms(inodo_dir.perms, PERM_READ)){
 	return ERROR_PERMISO_LECTURA;
     }
     entrada buffer[BLOCKSIZE/sizeof(entrada)];
@@ -93,7 +93,7 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
 	if (!reservar) return ERROR_NO_EXISTE_ENTRADA_CONSULTA;
 	//xpperror("tipo: %c, camino: %s, inodo_dir.type: %c, if %d\n", PURPLE, DEFAULT, true, false, tipo, camino_parcial, inodo_dir.type, inodo_dir.type == 'f');
 	if (inodo_dir.type == 'f') return -8;
-	if(!inode_has_perms(&inodo_dir, PERM_WRITE)){
+	if(!has_perms(inodo_dir.perms, PERM_WRITE)){
 	    return ERROR_PERMISO_ESCRITURA;
 	}
 	memcpy(_entrada.nombre, inicial, sizeof(inicial));
@@ -155,4 +155,71 @@ int mi_creat(char *path, unsigned char perms){
     unsigned int p_inodo = 0;
     unsigned int p_entrada = 0;
     return buscar_entrada(path, &rootInode, &p_inodo, &p_entrada, 1, perms);
+}
+
+/*
+ * flag:
+ *	- l: returns all info
+ *	- t: returns type|name
+ *	- n: only name
+ *
+ */
+int mi_dir(const char *camino, char *str){
+    unsigned int p_inodo = 0;
+    unsigned int p_entrada = 0;
+    unsigned int offset = 0;
+    superblock SB;
+    bread(SBPOS, &SB);
+    inode inodo;
+    struct STAT stat_entrada;
+    unsigned int p_inodo_dir = SB.rootInode;
+    int err = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
+    if(err<0)return err;
+    leer_inodo(p_inodo, &inodo);
+    if(!has_perms(inodo.perms, PERM_READ))return ERROR_PERMISO_ESCRITURA;
+    entrada _entrada;
+    char out[BLOCKSIZE];
+    memset(out, 0, BLOCKSIZE);
+    entrada buffer[BLOCKSIZE/sizeof(entrada)];
+    unsigned int strsize = 0;
+    while(offset<inodo.logicByteSize){
+	if(offset%BLOCKSIZE == 0)mi_read_f(p_inodo, buffer, offset, BLOCKSIZE);
+	_entrada = buffer[(offset%BLOCKSIZE)/sizeof(entrada)];
+	mi_stat_f(_entrada.ninodo, &stat_entrada);
+	    strsize += sprintf(out, "%c|%c%c%c|%s|%dB|%s|",
+		stat_entrada.tipo,
+		has_perms(stat_entrada.permisos, PERM_READ)?'r':'-',
+		has_perms(stat_entrada.permisos, PERM_WRITE)?'w':'-',
+		has_perms(stat_entrada.permisos, PERM_EXEC)?'x':'-',
+		strpl(ctime(&stat_entrada.mtime),"\n", "", 0),
+		stat_entrada.tamEnBytesLog,
+		_entrada.nombre);
+	if(sizeof(buffer)<strsize)return FALLO;
+	strcat(str, out);
+	offset+=sizeof(entrada);
+    }
+    return EXITO;
+}
+
+int mi_chmod(const char *camino, unsigned char perms){
+    unsigned int p_inodo = 0;
+    unsigned int p_entrada = 0;
+    superblock SB;
+    bread(SBPOS, &SB);
+    unsigned int p_inodo_dir = SB.rootInode;
+    int err = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
+    if (err<0)return err;
+    return mi_chmod_f(p_inodo, perms);
+}
+
+int mi_stat(const char *camino, struct STAT *p_stat){
+    superblock SB;
+    bread(SBPOS, &SB);
+    unsigned int rootInode = SB.rootInode;
+    unsigned int p_inodo = 0;
+    unsigned int p_entrada = 0;
+    int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
+    if(err<0)return err;
+    mi_stat_f(p_inodo, p_stat);
+    return p_inodo;
 }

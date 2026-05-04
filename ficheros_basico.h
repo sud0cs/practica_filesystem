@@ -86,5 +86,5 @@ int get_block_rank(inode *ptrinode, int logicblock, unsigned int *ptr);
 int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool reserve);
 int liberar_bloques_inodo(unsigned int sbl, inode *inodo);
 int liberar_inodo(unsigned int ninodo);
-bool inode_has_perms(inode *inodo, char perms);
+bool has_perms(char og_perms, char perms);
 #endif
