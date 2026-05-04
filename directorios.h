@@ -12,6 +12,8 @@
 
 #define TAMNOMBRE 60 //Tamaño del nombre de directorio o fichero, en Ext2 = 256
 
+#define DBGLVL8 1
+
 typedef struct{
     char nombre[TAMNOMBRE];
     unsigned int ninodo;

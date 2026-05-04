@@ -64,6 +64,9 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     if(extraer_camino(camino_parcial, inicial, final, &tipo)<0){
 	return ERROR_CAMINO_INCORRECTO;
     }
+    #if DBGLVL8
+    xpperror("[ buscar_entrada() -> inicial: %s, final: %s, reservar: %d ]\n", GRAY, DEFAULT, false, false, inicial, final, reservar);
+    #endif
 
     leer_inodo(*p_inodo_dir, &inodo_dir);
     if(!has_perms(inodo_dir.perms, PERM_READ)){
