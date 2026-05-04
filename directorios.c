@@ -75,7 +75,7 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     num_entrada_inodo = 0;
     if(cant_entradas_inodo>0){
 	while((num_entrada_inodo<cant_entradas_inodo) && found==false){
-	    if(offset%BLOCKSIZE==0)mi_read_f(*p_inodo_dir, buffer, offset, offset+BLOCKSIZE);
+	    if(offset%BLOCKSIZE==0)mi_read_f(*p_inodo_dir, buffer, offset, BLOCKSIZE);
 	    _entrada = buffer[num_entrada_inodo%(sizeof(buffer)/sizeof(entrada))];
 	    if(strcmp(_entrada.nombre, inicial)==0){
 		found = true;
@@ -87,7 +87,7 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     }
     if(found==false && num_entrada_inodo==cant_entradas_inodo){
 	if (!reservar) return ERROR_NO_EXISTE_ENTRADA_CONSULTA;
-	if (inodo_dir.type == 'f') return -8;
+	if (inodo_dir.type == 'f') return ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO;
 	if(!has_perms(inodo_dir.perms, PERM_WRITE)){
 	    return ERROR_PERMISO_ESCRITURA;
 	}
@@ -100,8 +100,7 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
 	    _entrada.ninodo = reservar_inodo('f', permisos);
 	}
 	
-	buffer[0] = _entrada;
-	mi_write_f(*p_inodo_dir, buffer, offset, sizeof(entrada));
+	mi_write_f(*p_inodo_dir, &_entrada, offset, sizeof(entrada));
     }
     int l = strlen(final);
     if(l==0 || (l==1 && final[0] == '/')){
@@ -152,13 +151,6 @@ int mi_creat(char *path, unsigned char perms){
     return buscar_entrada(path, &rootInode, &p_inodo, &p_entrada, 1, perms);
 }
 
-/*
- * flag:
- *	- l: returns all info
- *	- t: returns type|name
- *	- n: only name
- *
- */
 int mi_dir(const char *camino, char *str){
     unsigned int p_inodo = 0;
     unsigned int p_entrada = 0;
