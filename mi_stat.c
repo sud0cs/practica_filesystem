@@ -1,7 +1,7 @@
 #include "directorios.h"
 int main(int argc, char **argv){
     if(argc<3){
-	printf("mi_stat <disco> <path>\n");
+	fprintf(stderr, "mi_stat <disco> <path>\n");
 	return FALLO;
     }
     bmount(argv[1]);
@@ -9,6 +9,7 @@ int main(int argc, char **argv){
     int ninodo = mi_stat(argv[2], &st);
     if(ninodo<0){
 	print_dir_error(ninodo);
+	bumount();
 	return FALLO;
     }
     char down[strlen(argv[2])+38];

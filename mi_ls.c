@@ -1,13 +1,13 @@
 #include "directorios.h"
 int main(int argc, char **argv){
     if(argc<3){
-	printf("mi_ls <disco> <path>\n");
+	fprintf(stderr, "mi_ls <disco> <path>\n");
 	return FALLO;
     }
     int detailed = 0;
     detailed = strcmp(argv[1],"-l") == 0;
     if(argc==4 && !detailed){
-	printf("mi_ls <disco> <path>\n");
+	fprintf(stderr, "mi_ls <disco> <path>\n");
 	return FALLO;
     }
     bmount(argv[1+detailed]);
@@ -17,6 +17,7 @@ int main(int argc, char **argv){
     int err = mi_dir(path, buffer);
     if(err<0){
 	print_dir_error(err);
+	bumount();
 	return FALLO;
     }
     char* token = strtok(buffer, "|");
@@ -34,4 +35,5 @@ int main(int argc, char **argv){
 	i++;
     }
     bumount();
+    return EXITO;
 }
