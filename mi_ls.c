@@ -1,4 +1,5 @@
 #include "directorios.h"
+#declare BUFFERSIZE 4096
 int main(int argc, char **argv){
     if(argc<3){
 	fprintf(stderr, "mi_ls <disco> <path>\n");
@@ -12,8 +13,8 @@ int main(int argc, char **argv){
     }
     bmount(argv[1+detailed]);
     char *path = argv[2+detailed];
-    char buffer[2048];
-    memset(buffer, 0, 2048);
+    char buffer[BUFFERSIZE];
+    memset(buffer, 0, BUFFERSIZE);
     int err = mi_dir(path, buffer);
     if(err<0){
 	print_dir_error(err);
