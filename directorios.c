@@ -2,7 +2,7 @@
 #include "directorios.h"
 #include <string.h>
 #include <stdio.h>
-
+path_cache cache = {0};
 int extraer_camino(const char *camino, char *inicial, char *final, char *tipo){
     //Comprobar camino válido
     if(camino==NULL || strlen(camino)==0 || camino[0]!='/'){
@@ -225,4 +225,76 @@ int mi_stat(const char *camino, struct STAT *p_stat){
     if(err<0)return err;
     mi_stat_f(p_inodo, p_stat);
     return p_inodo;
+}
+
+void push_cache(const char *camino, unsigned int p_inodo){
+    memset(cache.path[cache.last_item_pos], 0, TAMNOMBRE*MAX_PATH_DEPTH);
+    memcpy(cache.path[cache.last_item_pos], camino, TAMNOMBRE*MAX_PATH_DEPTH);
+    cache.p_inode[cache.last_item_pos] = p_inodo;
+    cache.last_item_pos = (cache.last_item_pos+1)%CACHE_SIZE;
+    if(cache.items<CACHE_SIZE)cache.items++;
+}
+
+int find_cache(const char *camino){
+    if (cache.items<CACHE_SIZE){
+	for(int i = 0; i<cache.items; i++){
+	    if(strcmp(cache.path[i%CACHE_SIZE], camino)==0)return i;
+	}
+    }
+    else{
+	for(int i = cache.last_item_pos; i<cache.last_item_pos-CACHE_SIZE; i--){
+	    if(strcmp(cache.path[i%CACHE_SIZE], camino)==0)return i;
+	}
+    }
+    return -1;
+}
+
+//Maybe write a function to get p_inode since the same code is used in both functions?
+
+int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int nbytes){
+    int cache_pos = find_cache(camino);
+    unsigned int p_inodo = 0;
+    if(cache_pos>=0){
+	p_inodo = cache.p_inode[cache_pos];
+	#if DBGLVL9
+	xpperror("\n[ mi_write() -> Utilizamos datos almacenados en caché ]\n", BLUE, DEFAULT, false, false);
+	#endif
+    }
+    else{
+	superblock SB;
+	bread(SBPOS, &SB);
+	unsigned int rootInode = SB.rootInode;
+	unsigned int p_entrada = 0;
+	int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
+	if(err<0)return err;
+	push_cache(camino, p_inodo);
+	#if DBGLVL9
+	xpperror("\n[ mi_write() -> Actualizar caché ]\n", ORANGE, DEFAULT, false, false);
+	#endif
+    }
+    return mi_write_f(p_inodo, buffer, offset, nbytes);
+}
+
+int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int nbytes){
+    int cache_pos = find_cache(camino);
+    unsigned int p_inodo = 0;
+    if(cache_pos>=0){
+	p_inodo = cache.p_inode[cache_pos];
+	#if DBGLVL9
+	xpperror("\n[ mi_read() -> Utilizamos datos almacenados en caché ]\n", BLUE, DEFAULT, false, false);
+	#endif
+    }
+    else{
+	superblock SB;
+	bread(SBPOS, &SB);
+	unsigned int rootInode = SB.rootInode;
+	unsigned int p_entrada = 0;
+	int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
+	if(err<0)return err;
+	push_cache(camino, p_inodo);
+	#if DBGLVL9
+	xpperror("\n[ mi_read() -> Actualizar caché ]\n", ORANGE, DEFAULT, false, false);
+	#endif
+    }
+    return mi_read_f(p_inodo, buffer, offset, nbytes);
 }
