@@ -298,3 +298,87 @@ int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int 
     }
     return mi_read_f(p_inodo, buffer, offset, nbytes);
 }
+
+int mi_link(const char *camino1, const char *camino2){
+    unsigned int p_inodo1, p_inodo2, p_inodo_dir2;
+    unsigned int p_entrada1, p_entrada2;
+    inode inodo1;
+    entrada entrada2;
+
+    //Buscar camino1 (ha d'existir)
+    int r = buscar_entrada(camino1, &p_inodo_dir2, &p_inodo1, &p_entrada1, 0, 0);
+    if(r<0) return r;
+
+    //Llegir inodo1
+    leer_inodo(p_inodo1, &inodo1);
+
+    //Comprovar que és un fitxer i té permis de lectura
+    if(inodo1.type!='f') return ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO;
+    if(!has_perms(inodo1.perms, PERM_READ)) return ERROR_PERMISO_LECTURA;
+
+    //Crear entrada camino2
+    r = buscar_entrada(camino2, &p_inodo_dir2, &p_inodo2, &p_entrada2, 1, 6);
+    if(r<0) return r;
+
+    //Llegir entrada creada
+    mi_read_f(p_inodo_dir2, &entrada2, p_entrada2*sizeof(entrada), sizeof(entrada));
+
+    //Modificar entrada: apuntar al mateix inodo que camino2
+    entrada2.ninodo = p_inodo1;
+
+    //Escriure entrada modificada
+    mi_write_f(p_inodo_dir2, &entrada2, p_entrada2*sizeof(entrada), sizeof(entrada));
+
+    //Alliberar el inodo que s'havia reservat per camino2
+    liberar_inodo(p_inodo2);
+
+    //Incrementar nlinks del inodo original
+    inodo1.nlinks++;
+    inodo1.ctime = time(NULL);
+    escribir_inodo(p_inodo1, &inodo1);
+    
+    return EXITO;
+}
+
+int mi_unlink(const char *camino){
+    unsigned int p_inodo, p_inodo_dir, p_entrada;
+    inode inodo, inodo_dir;
+    entrada ultima, entrada_borrar;
+
+    //Buscar entrada
+    int r = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
+    if(r<0) return r;
+
+    //Llegir inodo a eliminar
+    leer_inodo(p_inodo, &inodo);
+
+    //Si es directori i no esta buit -> error
+    if(inodo.type=='d' && inodo.logicByteSize>0) return ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO;
+
+    //Llegir inodo del directori pare
+    leer_inodo(p_inodo_dir, &inodo_dir);
+
+    int nentradas = inodo_dir.logicByteSize/sizeof(entrada);
+
+    //Si no es l'ultima entrada -> copiar ultima
+    if(p_entrada!=nentradas-1){
+        mi_read_f(p_inodo_dir, &ultima, (nentradas-1)*sizeof(entrada), sizeof(entrada));
+        mi_write_f(p_inodo_dir, &ultima, p_entrada*sizeof(entrada), sizeof(entrada));
+    }
+
+    //Truncar directorio
+    mi_truncar_f(p_inodo_dir, inodo_dir.logicByteSize - sizeof(entrada));
+
+    //Decrementar nlinks
+    inodo.nlinks--;
+
+    //Si nlinks=0 -> eliminar inodo
+    if(inodo.nlinks==0){
+        liberar_inodo(p_inodo);
+    } else{
+        inodo.ctime = time(NULL);
+        escribir_inodo(p_inodo, &inodo);
+    }
+
+    return EXITO;
+}
