@@ -3,15 +3,31 @@
 #include "utils.h"
 #include "directorios.h"
 
+/*
+ * mostrar_buscar_entrada()
+ * ----------------------------------------------------------
+ * Función auxilar para probar buscar_entrada().
+ * 
+ * Muestra por pantalla el camino recibido y el modo(reservar o no), ejecuta buscar_entrada() y, si hay error,
+ * lo imprime mediante print_dir_error().
+ * 
+ * Parámetros:
+ *   camino -> ruta a buscar
+ *   reservar -> 0 consulta, 1 creacción
+*/
 void mostrar_buscar_entrada(char *camino, char reservar){
   unsigned int p_inodo_dir = 0;
   unsigned int p_inodo = 0;
   unsigned int p_entrada = 0;
   int error;
+
   printf("\ncamino: %s, reservar: %d\n", camino, reservar);
+  
+  //Llamada a buscar_entrada() y comprobación de error
   if ((error = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, reservar, 6)) < 0) {
     print_dir_error(error);
   }
+
   printf("**********************************************************************\n");
   return;
 }
@@ -30,6 +46,7 @@ void mostrar_buscar_entrada(char *camino, char reservar){
  * 
  * Parámetros:
  *   argv[1]-> nombre del disco vrtual
+ * 
  * Devuelve:
  *   EXITO (0) si todo es correcto
  *   FALLO (-1) si ocurre algún error
@@ -37,6 +54,7 @@ void mostrar_buscar_entrada(char *camino, char reservar){
 int main(int argc, char **argv){
     superblock SB;
 
+    //Comprobar sintaxis
     if(argc != 2){
         fprintf(stderr, "Sintaxis: leer_sf <disco>\n");
         return FALLO;
@@ -69,5 +87,7 @@ int main(int argc, char **argv){
     xpprint("# ", SALMON, DEFAULT, false, false);xpprint("totalInodes",PINK, DEFAULT, true, false);printf(": %d\n", SB.totalInodes);
 
     xpprint("##########################################", SALMON, DEFAULT, false, false);
+    
+    //Desmontar el disco
     bumount();
 }

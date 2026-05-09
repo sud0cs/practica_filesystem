@@ -20,12 +20,15 @@
 */
 int main(int argc, char **argv){
     if(argc != 4){
-        fprintf(stderr, "Sintaxis: permitir <disco> <ninodo> <permisos>\n");
+        fprintf(stderr, "Sintaxis: permitir <disco> <ninodo> <permisos>\n", argv[0]);
         return FALLO;
     }
 
     //Montar el disco virtual
-    bmount(argv[1]);
+    if(bmount(argv[1])<0){
+        fprintf(stderr, "Error: bmount\n");
+        return FALLO;
+    }
     
     unsigned int ninodo = atoi(argv[2]);
     unsigned char permisos = atoi(argv[3]);
@@ -38,8 +41,10 @@ int main(int argc, char **argv){
      *  bit 2: escritura(w)
      *  bit 1: ejecución(x)
     */
-    mi_chmod_f(ninodo, permisos);
+    int r = mi_chmod_f(ninodo, permisos);
+    if(r<0) fprintf(stderr, "Error: no se pudeieron cambiar los permisos\n");
 
     //Desmontar el disco
     bumount();
+    return r;
 }

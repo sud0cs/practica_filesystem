@@ -68,6 +68,7 @@ int main(int argc, char **argv){
 
     fprintf(stderr, "\n\nTotal leidos: %d\nTamEnBytesLog: %d\n", total, st.tamEnBytesLog);
     
+    //Desmontar el disco
     bumount();
     return 0;
 }

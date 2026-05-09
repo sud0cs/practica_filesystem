@@ -64,5 +64,6 @@ int main(int argc, char **argv){
     xpprint("#", 240, DEFAULT, false, false);xpprint(" Numero Bloques ocupados", 146, DEFAULT, true, false);xpprint(": %d\n", DEFAULT, DEFAULT, false, false, st.numBloquesOcupados);
     xpprint("##############################################", 240, DEFAULT, false, false);
     
+    //Desmontamos el disco
     bumount();
 }

@@ -68,7 +68,7 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
             bf = translate_inode_block(ninodo, bl, true);
             if(bf < 0) return FALLO;
 
-	bwrite(bf, (unsigned char *)buf_original + escritos);
+	        bwrite(bf, (unsigned char *)buf_original + escritos);
             escritos += BLOCKSIZE;
         }
 

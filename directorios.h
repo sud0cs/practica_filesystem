@@ -2,25 +2,40 @@
 #include "utils.h"
 #include <string.h>
 
-#define ERROR_CAMINO_INCORRECTO (-2)
-#define ERROR_PERMISO_LECTURA (-3)
-#define ERROR_NO_EXISTE_ENTRADA_CONSULTA (-4)
-#define ERROR_NO_EXISTE_DIRECTORIO_INTERMEDIO (-5)
-#define ERROR_PERMISO_ESCRITURA (-6)
-#define ERROR_ENTRADA_YA_EXISTENTE (-7)
-#define ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO (-8)
+//Códigos de error específicados de operaciones sobre directorios
+#define ERROR_CAMINO_INCORRECTO (-2) //Ruta inválida o mal formada
+#define ERROR_PERMISO_LECTURA (-3) //No hay permisos de lectura
+#define ERROR_NO_EXISTE_ENTRADA_CONSULTA (-4) //Entrada no encontrada(modo consulta)
+#define ERROR_NO_EXISTE_DIRECTORIO_INTERMEDIO (-5) //Falta un directorio en el camino
+#define ERROR_PERMISO_ESCRITURA (-6) //No hay permisos de escritura
+#define ERROR_ENTRADA_YA_EXISTENTE (-7) //La entrada ya existe(modo creación)
+#define ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO (-8) //Intento de crear dentro de un fichero
 
+
+//Parámetros del sistema de directorios
 #define TAMNOMBRE 60 //Tamaño del nombre de directorio o fichero, en Ext2 = 256
-#define MAX_PATH_DEPTH 32
-#define DBGLVL8 1
-#define DBGLVL9 1
-#define CACHE_SIZE 64
+#define MAX_PATH_DEPTH 32 //Profundidad máxima de un camino
+#define DBGLVL8 1 //Nivel de debug para buscar_entrada()
+#define DBGLVL9 1 //Nivel de debug para operaciones con caché
+#define CACHE_SIZE 64 //Tamaño de la caché de rutas
 
+/*
+ * Estructura de una entrada de directorio
+ *   nombre -> nombre del fichero/directorio
+ *   ninodo -> número de inodo asociado
+*/
 typedef struct{
     char nombre[TAMNOMBRE];
     unsigned int ninodo;
 }entrada;
 
+/*
+ * Canché de rutas para acelerar búsquedas repetidas
+ *   last_item_pos -> posición donde insertar el siguiente elemento
+ *   items -> número de elementos almacenados
+ *   path[] -> rutas completadas almacenadas
+ *   p_inode[] -> inodos asociados a cada ruta
+*/
 typedef struct{
     unsigned int last_item_pos;
     unsigned int items;
