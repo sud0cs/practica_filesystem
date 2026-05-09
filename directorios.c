@@ -117,8 +117,6 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     }
 }
 
-
-
 void print_dir_error(int error){
     switch(error){
 	case -2:
@@ -300,13 +298,18 @@ int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int 
 }
 
 int mi_link(const char *camino1, const char *camino2){
-    unsigned int p_inodo1, p_inodo2, p_inodo_dir2;
+    unsigned int p_inodo1, p_inodo2, p_inodo_dir1, p_inodo_dir2;
     unsigned int p_entrada1, p_entrada2;
     inode inodo1;
     entrada entrada2;
+    superblock SB;
+
+    bread(SBPOS, &SB);
+    p_inodo_dir1 = SB.rootInode;
+    p_inodo_dir2 = SB.rootInode;
 
     //Buscar camino1 (ha d'existir)
-    int r = buscar_entrada(camino1, &p_inodo_dir2, &p_inodo1, &p_entrada1, 0, 0);
+    int r = buscar_entrada(camino1, &p_inodo_dir1, &p_inodo1, &p_entrada1, 0, 0);
     if(r<0) return r;
 
     //Llegir inodo1
@@ -343,7 +346,11 @@ int mi_link(const char *camino1, const char *camino2){
 int mi_unlink(const char *camino){
     unsigned int p_inodo, p_inodo_dir, p_entrada;
     inode inodo, inodo_dir;
-    entrada ultima, entrada_borrar;
+    entrada ultima;
+    superblock SB;
+
+    bread(SBPOS, &SB);
+    p_inodo_dir = SB.rootInode;
 
     //Buscar entrada
     int r = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
@@ -367,7 +374,16 @@ int mi_unlink(const char *camino){
     }
 
     //Truncar directorio
-    mi_truncar_f(p_inodo_dir, inodo_dir.logicByteSize - sizeof(entrada));
+    //mi_truncar_f(p_inodo_dir, inodo_dir.logicByteSize - sizeof(entrada));
+    
+    //Actualitzar tamany l+ogic del directori pare
+    inodo_dir.logicByteSize -= sizeof(entrada);
+    inodo_dir.mtime = time(NULL);
+    inodo_dir.ctime = time(NULL);
+    escribir_inodo(p_inodo_dir, &inodo_dir);
+
+    //truncar fisicament si cal
+    mi_truncar_f(p_inodo_dir, inodo_dir.logicByteSize);
 
     //Decrementar nlinks
     inodo.nlinks--;
