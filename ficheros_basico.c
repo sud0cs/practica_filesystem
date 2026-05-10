@@ -673,10 +673,9 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
     xpperror("[liberar_bloques_inodo() -> liberar bloques desde %d hasta %d]\n", LIGHT_GREEN, DEFAULT, true, false, bcount, ebl);
     #endif
     memset(emptyBuffer, 0, BLOCKSIZE);
-    
     while(bcount <= ebl){
         rank = get_block_rank(inodo, bcount, &ptr);
-        if(rank < 0) return FALLO;    
+	if(rank < 0) return FALLO;
         
         c_rank = rank;
         while(ptr > 0 && c_rank > 0){
@@ -689,7 +688,6 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
             ptr = pointerBlocks[c_rank-1][block];
             c_rank--;
         }
-        
         if (ptr > 0){
             liberar_bloque(ptr);
 	    	#if DBGLVL6
@@ -776,11 +774,11 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
  *
  */
 int liberar_inodo(unsigned int ninodo){
-    superblock SB;
-    bread(SBPOS, &SB);
     inode inodo;
     leer_inodo(ninodo, &inodo);
-    int bloques = liberar_bloques_inodo(0, &inodo);
+    int bloques = liberar_bloques_inodo(0, &inodo); 
+    superblock SB;
+    bread(SBPOS, &SB);
     inodo.directPointers[0] = SB.firstFreeInode;
     inodo.type = 'l'; //tipo libre
     inodo.ctime = time(NULL);

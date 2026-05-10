@@ -20,7 +20,7 @@
 */
 int main(int argc, char **argv){
     if(argc != 4){
-        fprintf(stderr, "Sintaxis: permitir <disco> <ninodo> <permisos>\n", argv[0]);
+        fprintf(stderr, "Sintaxis: permitir <disco> <ninodo> <permisos>\n");
         return FALLO;
     }
 

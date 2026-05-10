@@ -56,7 +56,7 @@ int main(int argc, char **argv){
         total_leidos += leidos;
     }
 
-    printf("\nTotal_leidos %d\n", total_leidos);
+    fprintf(stderr,"\nTotal_leidos %d\n", total_leidos);
 
     //Si mi_read devolvió error
     if(leidos<0){

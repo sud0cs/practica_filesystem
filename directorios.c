@@ -289,12 +289,11 @@ int mi_dir(const char *camino, char *str){
 		strpl(ctime(&stat_entrada.mtime),"\n", "", 0),
 		stat_entrada.tamEnBytesLog,
 		buffer[0].nombre);
-	    EXITO;
+	    return EXITO;
     }
-    //Si es un directorio, recorremos todas sus entradas
     memset(out, 0, BLOCKSIZE);
     unsigned int strsize = 0;
-
+    //Si es un directorio, recorremos todas sus entradas
     while(offset<inodo.logicByteSize){
 	    if(offset%BLOCKSIZE == 0)mi_read_f(p_inodo, buffer, offset, BLOCKSIZE);
 	    

@@ -91,9 +91,8 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
         in.logicByteSize = nuevoTam;
     }
 
-    //Actualizar tiempos
+    //Actualizar tiempo
     in.mtime = time(NULL);
-    in.ctime = time(NULL);
 
     escribir_inodo(ninodo, &in);
 

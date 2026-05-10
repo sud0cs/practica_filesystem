@@ -50,7 +50,7 @@ int main(int argc, char **argv){
     int err = mi_dir(path, buffer);
     if(err<0){
 	    print_dir_error(err);
-        bumount();
+	    bumount();
 	    return FALLO;
     }
 

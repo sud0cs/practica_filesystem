@@ -5,7 +5,7 @@
  * ----------------------------------------------------------
  * Crea un directorio en el sistema de ficheros.
  * 
- * Este programa imita el comportamiento de ¡mkdir' en Linux:
+ * Este programa imita el comportamiento de mkdir en Linux:
  *   Si el path no termina en '/', se añade automáticamente
  *   Solo crea directorios(no archivos)
  *   Para crear archivos debe usarse mi_touch
@@ -13,7 +13,7 @@
  * Parámetros:
  *   argv[1]: nombre del dispositivo(disco virtual)
  *   argv[2]: permisos en octal(0-7)
- *   argv[3]: retua absoluta del directorio a crear
+ *   argv[3]: ruta absoluta del directorio a crear
  * 
  * Devuelve:
  *   EXITO(0) si todo va bien
