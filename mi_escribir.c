@@ -33,11 +33,13 @@ int main(int argc, char **argv){
     int offset = atoi(argv[4]);
 
     //Escribir el texto en el fichero indicado
-    int err = mi_write(argv[2], argv[3], offset, strlen(argv[3]));
+    int escritos = mi_write(argv[2], argv[3], offset, strlen(argv[3]));
+    printf("longitud texto: %d\n", (int)strlen(argv[3]));
+    printf("Bytes escritos: %d\n", escritos);
     
     //Comprobar errores de escritura
-    if(err<0){
-	    print_dir_error(err);
+    if(escritos<0){
+	    print_dir_error(escritos);
 	    bumount();
 	    return FALLO;
     }

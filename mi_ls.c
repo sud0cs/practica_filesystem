@@ -28,8 +28,7 @@ int main(int argc, char **argv){
     }
 
     //Comprobar si se usa el modo detallado(-l)
-    int detailed = 0;
-    detailed = strcmp(argv[1],"-l") == 0;
+    int detailed = detailed = strcmp(argv[1],"-l") == 0;
 
     //Si hay 4 argumentos pero no se ha usado -l -> error
     if(argc==4 && !detailed){
@@ -45,19 +44,27 @@ int main(int argc, char **argv){
 
     //Buffer donde mi_dir() devolverá la información
     char buffer[2048];
-    memset(buffer, 0, 2048);
+    memset(buffer, 0, sizeof(buffer));
 
     //Llamada a mi_dir()
     int err = mi_dir(path, buffer);
     if(err<0){
 	    print_dir_error(err);
+        bumount();
 	    return FALLO;
+    }
+
+    if(strlen(buffer)==0){
+        printf("Total: 0\n");
+        bumount();
+        return FALLO;
     }
 
     //Tokenizar la salida separada por '|'
     char* token = strtok(buffer, "|");
     unsigned int i = 0;
-    int color;
+    int color = DEFAULT;
+    int total = 0;
 
     //Cabecera del modo detallado
     if(detailed)printf("Tipo\tPerms\tmTime\t\t\t\tTamaño\tNombre\n--------------------------------------------------------------\n");
@@ -65,18 +72,32 @@ int main(int argc, char **argv){
     //Recorrer todos los tokens
     while (token != NULL) {
         //Determinar color según tipo o permisos
+        if(i%5 == 0) color = DEFAULT;
     	if(i%5 == 0)color=strcmp(token, "d")==0?BLUE:DEFAULT;
-	    if(i%5 == 1 && color==DEFAULT)color=token[2]=='x'?GREEN:DEFAULT;
+        if(i%5 == 1 && color==DEFAULT && strlen(token) >= 3) color=token[2]=='x'?GREEN:DEFAULT;
         
         //Nombre -> imprimir con color
-        if(i%5 == 4)xpprint("%s\n", color, DEFAULT, color!=DEFAULT, false, token);
-	    else{
+        if(i%5 == 4){
+            //nombre
+            if(detailed){
+                xpprint("%s\n", color, DEFAULT, color!=DEFAULT, false, token);
+            }else{
+                printf("%s\n", token);
+            }
+            total++;
+	    }else if(detailed){
             //Otros campos -> imprimir solo si es modo detallado
-	        if(detailed)printf("%s\t",token);
+	        //if(detailed)printf("%s\t",token);
+            printf("%s\t", token);
 	    }
 	    token = strtok(NULL, "|");
 	    i++;
     }
+    //Imprimir total
+    //if(detailed) printf("Total: %d\n, total");
+    //else printf("Total: %d\n", total);
+    printf("Total:%d\n", total);
+
     //Desmontar el disco
     bumount();
 }

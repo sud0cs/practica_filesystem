@@ -551,6 +551,12 @@ int mi_unlink(const char *camino){
     //Si es directorio y no esta vacío -> error
     if(inodo.type=='d' && inodo.logicByteSize>0) return ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO;
 
+    /*if(r==ERROR_DIR_NO_VACIO){
+        fprintf(stderr, "Error: El directorio %s no está vacío\n");
+    }else{
+        print_dir_error(r);
+    }*/
+
     //Leer inodo del directorio padre
     leer_inodo(p_inodo_dir, &inodo_dir);
 

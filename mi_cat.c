@@ -47,13 +47,16 @@ int main(int argc, char **argv){
     //Lectura del fichero en bloques
     int offset = 0;
     char buffer[TAMBUFFER];
-    unsigned int leidos = 0;
+    unsigned int leidos, total_leidos = 0;
 
     //Leer mientras queden datos
     while((leidos=mi_read(argv[2], buffer, offset, TAMBUFFER)) > 0){
 	    write(1, buffer, leidos); //Escribir por stdout
-	    offset+=leidos; //Avanzar offset
+	    offset += leidos; //Avanzar offset
+        total_leidos += leidos;
     }
+
+    printf("\nTotal_leidos %d\n", total_leidos);
 
     //Si mi_read devolvió error
     if(leidos<0){

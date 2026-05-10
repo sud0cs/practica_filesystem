@@ -32,7 +32,9 @@ int main(int argc, char **argv){
 
     //Intentar eliminar el directorio
     int r = mi_unlink(argv[2]);
-    if(r<0){
+    if(r==ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO){
+        fprintf(stderr, "Error: El directorio %s no está vacío\n", argv[2]);
+    }else if(r<0){
         print_dir_error(r); //Mostrar error descriptivo
     }
 

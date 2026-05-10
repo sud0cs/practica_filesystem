@@ -15,8 +15,8 @@
 //Parámetros del sistema de directorios
 #define TAMNOMBRE 60 //Tamaño del nombre de directorio o fichero, en Ext2 = 256
 #define MAX_PATH_DEPTH 32 //Profundidad máxima de un camino
-#define DBGLVL8 1 //Nivel de debug para buscar_entrada()
-#define DBGLVL9 1 //Nivel de debug para operaciones con caché
+#define DBGLVL8 0 //Nivel de debug para buscar_entrada()
+#define DBGLVL9 0 //Nivel de debug para operaciones con caché
 #define CACHE_SIZE 64 //Tamaño de la caché de rutas
 
 /*
