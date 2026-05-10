@@ -76,9 +76,8 @@ int main(int argc, char **argv){
     	if(i%5 == 0)color=strcmp(token, "d")==0?BLUE:DEFAULT;
         if(i%5 == 1 && color==DEFAULT && strlen(token) >= 3) color=token[2]=='x'?GREEN:DEFAULT;
         
-        //Nombre -> imprimir con color
         if(i%5 == 4){
-            //nombre
+            //Nombre
             if(detailed){
                 xpprint("%s\n", color, DEFAULT, color!=DEFAULT, false, token);
             }else{
@@ -86,16 +85,13 @@ int main(int argc, char **argv){
             }
             total++;
 	    }else if(detailed){
-            //Otros campos -> imprimir solo si es modo detallado
-	        //if(detailed)printf("%s\t",token);
+            //Otros campos
             printf("%s\t", token);
 	    }
 	    token = strtok(NULL, "|");
 	    i++;
     }
     //Imprimir total
-    //if(detailed) printf("Total: %d\n, total");
-    //else printf("Total: %d\n", total);
     printf("Total:%d\n", total);
 
     //Desmontar el disco

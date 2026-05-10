@@ -140,12 +140,11 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
 	    while((num_entrada_inodo<cant_entradas_inodo) && found==false){
 	        if(offset%BLOCKSIZE==0)mi_read_f(*p_inodo_dir, buffer, offset, BLOCKSIZE);
 	        _entrada = buffer[num_entrada_inodo%(sizeof(buffer)/sizeof(entrada))];
-	        offset+=sizeof(entrada);
-		if(strcmp(_entrada.nombre, inicial)==0){
+	        if(strcmp(_entrada.nombre, inicial)==0){
 		        found = true;
 		        *p_entrada = num_entrada_inodo;
-			break;
 	        }
+	        offset+=sizeof(entrada);
 	        num_entrada_inodo++;
 	    }
     }
@@ -496,7 +495,7 @@ int mi_link(const char *camino1, const char *camino2){
     if(!has_perms(inodo1.perms, PERM_READ)) return ERROR_PERMISO_LECTURA;
 
     //Crear entrada camino2
-    r = buscar_entrada(camino2, &p_inodo_dir2, &p_inodo2, &p_entrada2, 1, PERM_READ | PERM_WRITE);
+    r = buscar_entrada(camino2, &p_inodo_dir2, &p_inodo2, &p_entrada2, 1, 6);
     if(r<0) return r;
 
     //Leer entrada creada
@@ -552,12 +551,6 @@ int mi_unlink(const char *camino){
     //Si es directorio y no esta vacío -> error
     if(inodo.type=='d' && inodo.logicByteSize>0) return ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO;
 
-    /*if(r==ERROR_DIR_NO_VACIO){
-        fprintf(stderr, "Error: El directorio %s no está vacío\n");
-    }else{
-        print_dir_error(r);
-    }*/
-
     //Leer inodo del directorio padre
     leer_inodo(p_inodo_dir, &inodo_dir);
 
@@ -569,9 +562,6 @@ int mi_unlink(const char *camino){
         mi_write_f(p_inodo_dir, &ultima, p_entrada*sizeof(entrada), sizeof(entrada));
     }
 
-    //Truncar directorio
-    //mi_truncar_f(p_inodo_dir, inodo_dir.logicByteSize - sizeof(entrada));
-    
     //Actualitzar tamany lógic del directorio padre
     inodo_dir.logicByteSize -= sizeof(entrada);
     inodo_dir.mtime = time(NULL);
