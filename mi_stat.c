@@ -37,8 +37,10 @@ int main(int argc, char **argv){
     }
 
     //Crear una línea inferior de cierre hecha de '#'
-    char down[strlen(argv[2])+38];
+    int len = strlen(argv[2]);
+    char down[len+39];
     memset(down, '#', sizeof(down));
+    down[len+38] = '\0';
 
     //Cabecera del bloque de infomación
     xpprint("###############", 240, DEFAULT, false, false);xpprint(" STAT '%s'", DEFAULT, DEFAULT, true, false, argv[2]);xpprint("###############\n", 240, DEFAULT, false, false);

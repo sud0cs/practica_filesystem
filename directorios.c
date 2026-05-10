@@ -140,11 +140,12 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
 	    while((num_entrada_inodo<cant_entradas_inodo) && found==false){
 	        if(offset%BLOCKSIZE==0)mi_read_f(*p_inodo_dir, buffer, offset, BLOCKSIZE);
 	        _entrada = buffer[num_entrada_inodo%(sizeof(buffer)/sizeof(entrada))];
-	        if(strcmp(_entrada.nombre, inicial)==0){
+	        offset+=sizeof(entrada);
+		if(strcmp(_entrada.nombre, inicial)==0){
 		        found = true;
 		        *p_entrada = num_entrada_inodo;
+			break;
 	        }
-	        offset+=sizeof(entrada);
 	        num_entrada_inodo++;
 	    }
     }
@@ -495,7 +496,7 @@ int mi_link(const char *camino1, const char *camino2){
     if(!has_perms(inodo1.perms, PERM_READ)) return ERROR_PERMISO_LECTURA;
 
     //Crear entrada camino2
-    r = buscar_entrada(camino2, &p_inodo_dir2, &p_inodo2, &p_entrada2, 1, 6);
+    r = buscar_entrada(camino2, &p_inodo_dir2, &p_inodo2, &p_entrada2, 1, PERM_READ | PERM_WRITE);
     if(r<0) return r;
 
     //Leer entrada creada
