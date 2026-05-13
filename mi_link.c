@@ -23,20 +23,24 @@
 int main(int argc, char **argv){
     if(argc!=4){
         fprintf(stderr, "Sintaxis: %s <disco> </ruta_original> </ruta_enlace\n", argv[0]);
-        return -1;
+        return FALLO;
     }
 
     //Montar el disco virtual
     if(bmount(argv[1])<0){
         fprintf(stderr, "Error: bmount\n");
-        return -1;
+        return FALLO;
     }
 
     //Intentar crear el enlace duro
     int r = mi_link(argv[2], argv[3]);
-    if(r<0) print_dir_error(r); //Montar error descriptivo
+    if(r<0){
+        print_dir_error(r); //Montar error descriptivo
+        bumount();
+        return FALLO;
+    }
 
     //Desmontar el disco
     bumount();
-    return r;
+    return EXITO;
 }

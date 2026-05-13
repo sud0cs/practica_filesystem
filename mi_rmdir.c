@@ -22,12 +22,13 @@
 int main(int argc, char **argv){
     if(argc!=3){
         fprintf(stderr, "Sintaxis: mi_rmdir <disco> </ruta_directorio>\n");
+        return FALLO;
     }
 
     //Montar el disco virtual
     if(bmount(argv[1])<0){
         fprintf(stderr, "Error: bmount\n");
-        return -1;
+        return FALLO;
     }
 
     //Intentar eliminar el directorio

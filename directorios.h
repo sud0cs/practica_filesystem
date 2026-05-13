@@ -1,3 +1,6 @@
+#ifndef DIRECTORIOS_H
+#define DIRECTORIOS_H
+
 #include "ficheros.h"
 #include "utils.h"
 #include <string.h>
@@ -10,7 +13,6 @@
 #define ERROR_PERMISO_ESCRITURA (-6) //No hay permisos de escritura
 #define ERROR_ENTRADA_YA_EXISTENTE (-7) //La entrada ya existe(modo creación)
 #define ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO (-8) //Intento de crear dentro de un fichero
-
 
 //Parámetros del sistema de directorios
 #define TAMNOMBRE 60 //Tamaño del nombre de directorio o fichero, en Ext2 = 256
@@ -54,3 +56,4 @@ int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int
 int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int nbytes);
 int mi_link(const char *camino1, const char *camino2);
 int mi_unlink(const char *camino);
+#endif

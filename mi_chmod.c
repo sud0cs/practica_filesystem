@@ -25,7 +25,10 @@ int main(int argc, char **argv){
     }
 
     //Montar disco virtual
-    bmount(argv[1]);
+    if(bmount(argv[1])<0){
+        fprint(stderr, "Error: bmount\n");
+        return FALLO;
+    }
 
     //Convertir permisos a número
     unsigned char perms = atoi(argv[2]);
@@ -36,8 +39,14 @@ int main(int argc, char **argv){
     }
 
     //Aplicar permisos sobre la ruta indicada
-    mi_chmod(argv[3], perms);
+    int r = mi_chmod(argv[3], perms);
+    if(r<0){
+        print_dir_error(r);
+        bumount();
+        return FALLO;
+    }
 
     //Desmontar el disco
     bumount();
+    return EXITO;
 }

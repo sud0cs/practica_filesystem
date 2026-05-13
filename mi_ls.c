@@ -37,7 +37,10 @@ int main(int argc, char **argv){
     }
 
     //Montar el disco (el índice depende de si hay -l)
-    bmount(argv[1+detailed]);
+    if(bmount(argv[1+detailed])<0){
+        fprintf(stderr, "Error: bmount\n");
+        return FALLO;
+    }
 
     //Ruta del directorio a listar
     char *path = argv[2+detailed];

@@ -29,7 +29,10 @@ int main(int argc, char **argv){
     }
 
     //Montar el disco virtual
-    bmount(argv[1]);
+    if(bmount(argv[1])<0){
+        fprintf(stderr, "Error: bmount\n");
+        return FALLO;
+    }
 
     char *path = argv[3];
     
