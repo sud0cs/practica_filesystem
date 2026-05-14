@@ -286,6 +286,8 @@ int reservar_bloque(){
 	unsigned char bufferAux[BLOCKSIZE];
 	memset(bufferAux, 255, BLOCKSIZE);
 
+	mi_waitSem();
+
 	int nbloqueMB = 0;
 
 	// Comparar el buffer leído de MB con un buffer con todos los bits a 1 e ir aumentando nbloqueMB
@@ -323,6 +325,8 @@ int reservar_bloque(){
 	memset(buffer, 0, BLOCKSIZE);
 	bwrite(nbloque, buffer);
 
+	mi_signalSem();
+
 	return nbloque;
 }
 
@@ -340,6 +344,9 @@ int reservar_bloque(){
  */
 int liberar_bloque(unsigned int nbloque){
 	superblock SB;
+
+	mi_waitSem();
+
 	bread(SBPOS, &SB);
 
 	// Pone a 0 el bit de MB que representa nbloque
@@ -348,6 +355,8 @@ int liberar_bloque(unsigned int nbloque){
 	// Actualizar superbloque
 	SB.freeBlocks++;
 	bwrite(SBPOS, &SB);
+
+	mi_signalSem();
 
 	return nbloque;
 }
@@ -436,6 +445,8 @@ int leer_inodo(unsigned int ninodo, inode *inodo){
  *
  */
 int reservar_inodo(unsigned char tipo, unsigned char permisos){
+	mi_waitSem();
+
 	superblock SB;
 	bread(SBPOS, &SB);
 
@@ -474,6 +485,8 @@ int reservar_inodo(unsigned char tipo, unsigned char permisos){
 	// Actualiza el superbloque
 	SB.freeInodes--;
 	bwrite(SBPOS, &SB);
+
+	mi_signalSem();
 
 	return posInodoReservado;
 }
@@ -565,10 +578,18 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 
     int rank = get_block_rank(&ptrinode, logicblock, &ptr);
     bool update_inode = false;
+	
+	//Inici seccio critica(nomes si reserve = true)
+	if(reserve) mi_waitSem();
 
     if (rank == 0) {
+		//Punters directes
 		if(ptr == 0){
-	    	if(!reserve) return FALLO;
+	    	if(!reserve){
+				if(reserve) mi_signalSem();
+				return FALLO;
+			}
+			
 	    	ptr = reservar_bloque();
 	    	#if DBGLVL4
 	    	xpperror("[ translate_inode_block() -> inode.directPointers[%d] = %d ]\n", GRAY, DEFAULT, false, false, logicblock, ptr);
@@ -579,6 +600,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 	    	update_inode = true;
 		}
     } else{
+		//Punters indirectes
 		unsigned int buffer[NPOINTERS];
 		memset(buffer, 0, BLOCKSIZE);
 		unsigned int block;
@@ -589,7 +611,11 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		if (rank == 0 && ptr != 0) break;
 	    	block = get_block_index(logicblock, rank+arr);
 		    if(ptr == 0){
-				if(!reserve) return FALLO;
+				if(!reserve){
+					if(reserve) mi_signalSem();
+					return FALLO;
+				}
+
 				ptr = reservar_bloque();
 
 				if (rank==blvl && !arr) {
@@ -637,7 +663,12 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		    } else ptr = pptr;
 		}
     }
+	//Escriure indode si ha canviat
     if (update_inode) escribir_inodo(ninode, &ptrinode);
+
+	//Fi seccio critica
+	if(reserve) mi_signalSem();
+
     return ptr;
 }
 
@@ -774,6 +805,8 @@ int liberar_bloques_inodo(unsigned int sbl, inode *inodo){
  *
  */
 int liberar_inodo(unsigned int ninodo){
+	mi_waitSem();
+
     inode inodo;
     leer_inodo(ninodo, &inodo);
     int bloques = liberar_bloques_inodo(0, &inodo); 
@@ -788,6 +821,9 @@ int liberar_inodo(unsigned int ninodo){
     SB.freeInodes++;
     SB.firstFreeInode = ninodo;
     bwrite(SBPOS, &SB);
+
+	mi_signalSem();
+	
     return bloques;
 }
 

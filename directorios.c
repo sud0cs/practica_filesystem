@@ -236,7 +236,14 @@ int mi_creat(char *path, unsigned char perms){
     unsigned int p_inodo_dir = 0;
     unsigned int p_inodo = 0;
     unsigned int p_entrada = 0;
-    return buscar_entrada(path, &p_inodo_dir, &p_inodo, &p_entrada, 1, perms);
+
+    mi_waitSem();
+
+    int r = buscar_entrada(path, &p_inodo_dir, &p_inodo, &p_entrada, 1, perms);
+
+    mi_signalSem();
+    
+    return r;
 }
 
 /*
@@ -481,6 +488,9 @@ int mi_link(const char *camino1, const char *camino2){
     p_inodo_dir1 = SB.rootInode;
     p_inodo_dir2 = SB.rootInode;
 
+    //Inicio sección critica
+    mi_waitSem();
+
     //Buscar camino1 (tiene que existir)
     int r = buscar_entrada(camino1, &p_inodo_dir1, &p_inodo1, &p_entrada1, 0, 0);
     if(r<0) return r;
@@ -512,6 +522,9 @@ int mi_link(const char *camino1, const char *camino2){
     inodo1.nlinks++;
     inodo1.ctime = time(NULL);
     escribir_inodo(p_inodo1, &inodo1);
+
+    //Final sección critica
+    mi_signalSem();
     
     return EXITO;
 }
@@ -538,6 +551,9 @@ int mi_unlink(const char *camino){
 
     bread(SBPOS, &SB);
     p_inodo_dir = SB.rootInode;
+
+    //Inicio sección critica
+    mi_waitSem();
 
     //Buscar entrada
     int r = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
@@ -577,6 +593,9 @@ int mi_unlink(const char *camino){
         inodo.ctime = time(NULL);
         escribir_inodo(p_inodo, &inodo);
     }
+
+    //Final seccion critica
+    mi_signalSem();
 
     return EXITO;
 }

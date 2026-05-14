@@ -41,7 +41,7 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
     unsigned char buf_bloque[BLOCKSIZE];
     int escritos = 0;
 
-    
+    //Escritura de datos(sin semáforo)
     if(primerBL == ultimoBL){ //Caso 1: todo cabe en un solo bloque lógico
         int bf = translate_inode_block(ninodo, primerBL, true);
         if(bf < 0) return FALLO;
@@ -83,7 +83,9 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
         escritos += tamUltimo;
     }
     //Releer el inodo para obtener usedBlocks actualizado en translate_inode_block
-    leer_inodo(ninodo, &in);
+    //Sección crítica, solo para metadatos
+    mi_waitSem();
+    leer_inodo(ninodo, &in); //Actualizar usedBlocks
 
     //Actualizar tamaño lógico
     unsigned int nuevoTam = offset + escritos;
@@ -95,6 +97,8 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
     in.mtime = time(NULL);
 
     escribir_inodo(ninodo, &in);
+
+    mi_signalSem();
 
     return escritos;
 }
@@ -137,7 +141,7 @@ int mi_read_f(unsigned int ninodo, void *buf_original, unsigned int offset, unsi
         nbytes = in.logicByteSize - offset;
     }
 
-    //Calcular blqoues lógicos (distancias)
+    //Calcular bloques lógicos (distancias)
     unsigned int primerBL = offset / BLOCKSIZE;
     unsigned int ultimoBL = (offset + nbytes - 1) / BLOCKSIZE;
     unsigned int desp1 = offset % BLOCKSIZE;
@@ -148,6 +152,7 @@ int mi_read_f(unsigned int ninodo, void *buf_original, unsigned int offset, unsi
     unsigned int restantes = nbytes;
     
     //Leer bloque a bloque
+    //Lecura de datis (sin semaforo)
     for(unsigned int bl = primerBL; bl <= ultimoBL; bl++){
         int bf = translate_inode_block(ninodo, bl, 0);
 
@@ -169,8 +174,14 @@ int mi_read_f(unsigned int ninodo, void *buf_original, unsigned int offset, unsi
         restantes -= trozo;
     }
     //Actualizar atime
+    //Sección critica solo para atime;
+    mi_waitSem();
+
+    leer_inodo(ninodo, &in);
     in.atime = time(NULL);
     escribir_inodo(ninodo, &in);
+
+    mi_signalSem();
 
     return leidos;
 }
@@ -220,12 +231,20 @@ int mi_stat_f(unsigned int ninodo, struct STAT *p_stat){
 */
 int mi_chmod_f(unsigned int ninodo, unsigned char permisos){
     inode in;
-    leer_inodo(ninodo, &in);
 
+    //Inicio seccion critica
+    mi_waitSem();
+
+    leer_inodo(ninodo, &in);
     in.perms = permisos;
     in.ctime = time(NULL);
 
-    return escribir_inodo(ninodo, &in);
+    int r = escribir_inodo(ninodo, &in);
+
+    //Final seccion critica
+    mi_signalSem();
+
+    return r;
 }
 
 /*
@@ -247,15 +266,25 @@ int mi_truncar_f(unsigned int ninodo, unsigned int nbytes){
     inode inodo;
     leer_inodo(ninodo, &inodo);
 
+    //Inicio seccion critica
+    mi_waitSem();
+
+    //Calcula del primer bloque lógico a conservar
     int sbl = nbytes%BLOCKSIZE==0?nbytes/BLOCKSIZE:nbytes/BLOCKSIZE + 1;
     
+    //Liberar bloque sobrantes
     int freed = liberar_bloques_inodo(sbl, &inodo);
     
+    //Actualizar metadatos
     inodo.mtime = time(NULL);
     inodo.ctime = time(NULL);
     inodo.logicByteSize = nbytes;
     inodo.usedBlocks-=freed;
     
     escribir_inodo(ninodo, &inodo);
+
+    //Final seccio critica
+    mi_signalSem();
+
     return freed;
 }

@@ -1,8 +1,11 @@
+#include "semaforo_mutex_posix.h"
 #include "bloques.h"
 #include "utils.h"
 
 //Descriptor del fichero que representa el dispositivo virtual
 static int descriptor = 0;
+static sem_t *mutex = NULL;
+static unsigned int inside_sc = 0;
 
 /*
  * bmount()
@@ -21,6 +24,11 @@ static int descriptor = 0;
 int bmount(const char *camino){
     //Abrimos el fichero con permisos de lectura/escritura y creación
     descriptor = open(camino, O_RDWR | O_CREAT, 0666);
+
+    if(!mutex){
+        mutex = initSem();
+        if(mutex==SEM_FAILED) return FALLO;
+    }
 
     //Si open() falla, descriptor = -1
     if(descriptor == -1){
@@ -54,6 +62,10 @@ int bumount(){
     }
 
     descriptor = 0; //Marcamos que ya no hay ningun disco abierto
+    
+    deleteSem(mutex);
+    mutex=NULL;
+    
     return EXITO;
 }
 
@@ -117,4 +129,14 @@ int bread(unsigned int nbloque, void *buf){
     }
 
     return leidos; //Si todo va bien, será BLOCKSIZE
+}
+
+void mi_waitSem(){
+    if(!inside_sc) waitSem(mutex);
+    inside_sc++;
+}
+
+void mi_signalSem(){
+    inside_sc--;
+    if(!inside_sc) signalSem(mutex);
 }
