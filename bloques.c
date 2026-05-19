@@ -1,7 +1,6 @@
-#include "semaforo_mutex_posix.h"
 #include "bloques.h"
 #include "utils.h"
-
+#include "semaforo_mutex_posix.h"
 //Descriptor del fichero que representa el dispositivo virtual
 static int descriptor = 0;
 static sem_t *mutex = NULL;
@@ -23,6 +22,10 @@ static unsigned int inside_sc = 0;
 */
 int bmount(const char *camino){
     //Abrimos el fichero con permisos de lectura/escritura y creación
+
+    if (descriptor > 0) {
+       close(descriptor);
+    }
     descriptor = open(camino, O_RDWR | O_CREAT, 0666);
 
     if(!mutex){

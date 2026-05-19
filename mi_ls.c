@@ -76,7 +76,7 @@ int main(int argc, char **argv){
     while (token != NULL) {
         //Determinar color según tipo o permisos
         if(i%5 == 0) color = DEFAULT;
-    	if(i%5 == 0)color=strcmp(token, "d")==0?BLUE:DEFAULT;
+    	  if(i%5 == 0)color=strcmp(token, "d")==0?BLUE:DEFAULT;
         if(i%5 == 1 && color==DEFAULT && strlen(token) >= 3) color=token[2]=='x'?GREEN:DEFAULT;
         
         //Nombre -> imprimir con color

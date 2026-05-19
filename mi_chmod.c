@@ -20,13 +20,13 @@
 int main(int argc, char **argv){
     //Comprbar número de argumentos
     if(argc<4){
-        printf("mi_chmod <disco> <permisos> <path>\n");
+        fprintf(stderr, "mi_chmod <disco> <permisos> <path>\n");
 	    return EXITO;
     }
 
     //Montar disco virtual
     if(bmount(argv[1])<0){
-        fprint(stderr, "Error: bmount\n");
+        fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
 
