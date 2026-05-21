@@ -41,16 +41,13 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
     unsigned char buf_bloque[BLOCKSIZE];
     int escritos = 0;
 
-    //Escritura de datos(sin semáforo)
     if(primerBL == ultimoBL){ //Caso 1: todo cabe en un solo bloque lógico
         int bf = translate_inode_block(ninodo, primerBL, true);
         if(bf < 0) return FALLO;
-
         bread(bf, buf_bloque);
 
         memcpy(buf_bloque + desp1, buf_original, nbytes);
         bwrite(bf, buf_bloque);
-
         escritos = nbytes;
     } else{ //Caso 2: varios bloques lógicos
         //Primer bloque parcial
@@ -97,7 +94,6 @@ int mi_write_f(unsigned int ninodo, const void *buf_original, unsigned int offse
     in.mtime = time(NULL);
 
     escribir_inodo(ninodo, &in);
-
     mi_signalSem();
 
     return escritos;

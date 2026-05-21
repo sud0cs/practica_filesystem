@@ -13,55 +13,74 @@ void reaper(){
   while ((ended=waitpid(-1, NULL, WNOHANG))>0) {
      acabados++;
   }
-  xpperror("acabados =  %d\n", DEFAULT, DEFAULT, false, false, acabados);
 }
 
 int main(int argc, char** argv){
+  
+  if(argc<2){
+    fprintf(stderr, "./simulacion <disco>");
+  }
+
   time_t c_time = time(NULL);
   struct tm *tmctime = localtime(&c_time);
   char path_parent[1024];
-  int pid;
+  int pid = 0;
   int err;
-  fprintf(stderr, "MY PID: %d", getpid());
   strftime(path_parent, sizeof(path_parent), "/simul_%Y%m%d%H%M%S/", tmctime);
-
+char path_child[1024];
   //create directory
-  bmount(argv[1]);
+  if(bmount(argv[1]) == FALLO){
+    return FALLO;
+  }
   err = mi_creat(path_parent, PERM_READ | PERM_WRITE);
   if(err<0){
     print_dir_error(err);
     return -1;
   }
-  fprintf(stderr, "simulation dir: %s\n", path_parent);
   signal(SIGCHLD, reaper);
   for(int i = 0; i<PROCESOS; i++){
     pid = fork();
     srand(time(NULL) + getpid());
     if(pid==0){
-      xpperror("--- creating process %d with pid %d ---\n", PURPLE, DEFAULT, false, true, i, getpid());
+      int id = i+1;
       bmount(argv[1]);
-      char path_child[1024];
+      memset(path_child, 0, sizeof(path_child));
+      //se crean el directorio y el archivo en el que almacenar los datos
       strncpy(path_child, path_parent, 1024);
       sprintf(path_child+strlen(path_child), "%d/", getpid());
-      mi_creat(path_child, PERM_READ | PERM_WRITE);
+      err = mi_creat(path_child, PERM_READ | PERM_WRITE);
+      if(err<0){
+        print_dir_error(err);
+        return -1;
+      }
       sprintf(path_child+strlen(path_child), "%s", "data.dat");
-      mi_creat(path_child, PERM_READ | PERM_WRITE);
+      err = mi_creat(path_child, PERM_READ | PERM_WRITE);
+      if(err<0){
+        print_dir_error(err);
+        return -1;
+      }
+
       REGISTRO reg;
-      for(int j = 0; j<NUMESCRITURAS; j++){
+      int j;
+      for(j = 0; j<NUMESCRITURAS; j++){
+        
+        //cargar datos en el registro
         reg.fecha = time(NULL);
         reg.pid = getpid();
-        reg.nEscritura = j;
+        reg.nEscritura = j+1;
         reg.nRegistro = rand() % REGMAX;
-        //escribir registro
-        xpperror("WRITE: %d/%d AT PROCESS %d (%s)\n", BLUE, DEFAULT, false, false,j+1,NUMESCRITURAS, getpid(), path_child);
-        xpperror("CONTENT: \nfecha: %spid: %d\nnEscritura: %d\nnRegistro: %d\n", GREEN, DEFAULT, true, false, ctime(&reg.fecha), reg.pid, reg.nEscritura, reg.nRegistro);
-        mi_write(path_child, &reg, reg.nRegistro*sizeof(REGISTRO), sizeof(REGISTRO));
+        
+        //escribir el registro
+        err = mi_write(path_child, &reg, reg.nRegistro*sizeof(REGISTRO), sizeof(REGISTRO));
+        if(err<0){
+          print_dir_error(err);
+          return -1;
+        }
         //esperar 0.05 segundos
         usleep(0.05 * MICROSECOND);
       }
-      xpperror("EXITING PROCESS %d\n", DEFAULT, DEFAULT, false, false, getpid());
+      xpperror("[Proceso %d -> Escritos %d/%d registros en %s]\n", GRAY, DEFAULT, false, false,id, j, NUMESCRITURAS, path_child);
       bumount();
-      xpperror("UMOUNT PROCESS %d\n", RED, DEFAULT, false, false, getpid());
       exit(0);
     }
     //esperar 0.15 segundos

@@ -46,7 +46,7 @@ int main(int argc, char **argv){
     char *path = argv[2+detailed];
 
     //Buffer donde mi_dir() devolverá la información
-    char buffer[2048];
+    char buffer[8192];
     memset(buffer, 0, sizeof(buffer));
 
     //Llamada a mi_dir()

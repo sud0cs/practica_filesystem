@@ -14,18 +14,23 @@ typedef struct {
 #define MAXOFFSET sizeof(REGISTRO)*REGMAX
 
 int main(int argc, char **argv){
-  bmount(argv[1]);
+  if(argc<3){
+    fprintf(stderr, "./verificacion <disco> <ruta simulación>");
+    return FALLO;
+  }
+  if(bmount(argv[1]) == FALLO){
+    return FALLO;
+  }
   char output_path[1024];
   struct STAT stat;
   mi_stat(argv[2], &stat);
   if(stat.tamEnBytesLog/sizeof(entrada)!=PROCESOS){
     xpperror("ERROR: el número de entradas no coincide con el número de procesos", RED, DEFAULT, true, false);
   }
-  
-  char dir_buffer[4096];
+  if(argv[2][strlen(argv[2])-1] == '/')argv[2][strlen(argv[2])-1]='\0';
+  char dir_buffer[8192];
   char *ptr = dir_buffer;
   mi_dir(argv[2], dir_buffer);
-  
   sprintf(output_path, "%s/informe.txt", argv[2]);
   mi_creat(output_path, PERM_READ | PERM_WRITE);
   
@@ -41,11 +46,12 @@ int main(int argc, char **argv){
   unsigned int output_offset = 0;
   unsigned int new_offset;
   char output_buffer[1024];
+  int process = 1;
   while (token != NULL) {
     if(i%5 == 4){
-      fprintf(stderr, "%s\n", token);
       info.pid = atoi(token);
       info.nEscrituras = 0;
+      memset(data_path, 0, sizeof(data_path));
       sprintf(data_path, "%s/%s/data.dat", argv[2], token);
       buffer_offset = 0;
       while(buffer_offset<MAXOFFSET){
@@ -53,33 +59,34 @@ int main(int argc, char **argv){
         mi_read(data_path, regbuffer, buffer_offset, sizeof(regbuffer));
         for(int j = 0; j<256; j++){
           if(regbuffer[j].pid == info.pid){
-            xpperror("READ: \t%d\t%d\t%d\t%s", RED, DEFAULT, false, false, regbuffer[j].pid, regbuffer[j].nEscritura, regbuffer[j].nRegistro, ctime(&regbuffer[j].fecha));
             if(info.nEscrituras == 0){
               info.menorPosicion = regbuffer[j];
               info.primeraEscritura = regbuffer[j];
               info.ultimaEscritura = regbuffer[j];
             }
-            if(info.nEscrituras == NUMESCRITURAS-1){
-              break;
-            }
+            
             if(regbuffer[j].nRegistro>info.mayorPosicion.nRegistro)info.mayorPosicion = regbuffer[j];
             if(regbuffer[j].nEscritura<info.primeraEscritura.nEscritura)info.primeraEscritura = regbuffer[j];
             if(regbuffer[j].nEscritura>info.ultimaEscritura.nEscritura)info.ultimaEscritura = regbuffer[j];
             info.nEscrituras++;
+            if(info.nEscrituras == NUMESCRITURAS)break;
           }
         }
-        if(info.nEscrituras == NUMESCRITURAS-1)break;
+        if(info.nEscrituras == NUMESCRITURAS)break;
         buffer_offset+=256*sizeof(REGISTRO);
       }
-
+      xpperror("[%d) %d escrituras validadas en %s]\n", GRAY, DEFAULT, false, false, process, info.nEscrituras, data_path);
       memset(output_buffer, 0, sizeof(output_buffer));
-      new_offset = sprintf(output_buffer, "\nPID: %d\nNumero escrituras: %d\nMenor Posición\t\t%d\t%d\t%sMayor Posición\t\t%d\t%d\t%sPrimera Escritura\t%d\t%d\t%sÚltima Escritura\t\t%d\t%d\t%s\n", info.pid, info.nEscrituras, info.menorPosicion.nEscritura, info.menorPosicion.nRegistro, ctime(&info.menorPosicion.fecha), info.mayorPosicion.nEscritura, info.mayorPosicion.nRegistro, ctime(&info.mayorPosicion.fecha), info.primeraEscritura.nEscritura, info.primeraEscritura.nRegistro, ctime(&info.primeraEscritura.fecha), info.ultimaEscritura.nEscritura, info.ultimaEscritura.nRegistro, ctime(&info.ultimaEscritura.fecha));
+      new_offset = sprintf(output_buffer, "\nPID: %d\nNumero escrituras: %d\nMenor Posición\t\t%d\t%d\t%sMayor Posición\t\t%d\t%d\t%sPrimera Escritura\t%d\t%d\t%sÚltima Escritura\t%d\t%d\t%s\n", info.pid, info.nEscrituras, info.menorPosicion.nEscritura, info.menorPosicion.nRegistro, ctime(&info.menorPosicion.fecha), info.mayorPosicion.nEscritura, info.mayorPosicion.nRegistro, ctime(&info.mayorPosicion.fecha), info.primeraEscritura.nEscritura, info.primeraEscritura.nRegistro, ctime(&info.primeraEscritura.fecha), info.ultimaEscritura.nEscritura, info.ultimaEscritura.nRegistro, ctime(&info.ultimaEscritura.fecha));
       mi_write(output_path, output_buffer, output_offset, sizeof(output_buffer));
       output_offset+=new_offset;
+      process++;
     }
     i++;
     token = strtok_r(NULL, "|", &ptr);
   }
+  printf("Output file: ");
+  xpprint("%s", BLUE, DEFAULT, false, false, output_path);
   bumount();
   return 0;
 }

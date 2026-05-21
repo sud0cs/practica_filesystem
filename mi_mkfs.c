@@ -70,10 +70,8 @@ int main(int argc, char **argv){
    * Crea la lista de inodos libres
   */
   initAI(nblocks);
-
   //reserar el inodo raíz
   reservar_inodo('d', 7);
-
   //Cerramos el disco virtual
   return bumount();
 }

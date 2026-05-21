@@ -100,8 +100,9 @@ int initMB(int nblocks){
 	unsigned char buffer[BLOCKSIZE];
 
 	//Rellenar todos los bloques del MB con 255 (11111111)
-	for(int i = 0; i < tamMB(nblocks); i++){
-		memset(buffer, 255, BLOCKSIZE);
+	
+	memset(buffer, 0, BLOCKSIZE);
+  for(int i = 0; i < tamMB(nblocks); i++){
 		bwrite(SB.startMB + i, buffer);
 	}
 
@@ -110,8 +111,8 @@ int initMB(int nblocks){
 	bread(lastMB, buffer);
 
 	//Posar a 0 els bytes que sobren
-	for(int i = fullBytes + (restBits > 0 ? 1 : 0); i < BLOCKSIZE; i++){
-		buffer [i] = 0;
+	for(int i = 0; i < fullBytes + (restBits > 0 ? 1 : 0); i++){
+		buffer [i] = 255;
 	}
 
 	//Construir el byte parcial
@@ -293,7 +294,7 @@ int reservar_bloque(){
 	// Comparar el buffer leído de MB con un buffer con todos los bits a 1 e ir aumentando nbloqueMB
 	while(nbloqueMB < (SB.endMB - SB.startMB + 1)){
 		bread(SB.startMB+nbloqueMB, bufferMB);
-		if(memcmp(bufferMB, bufferAux, BLOCKSIZE) != 0){
+    if(memcmp(bufferMB, bufferAux, BLOCKSIZE) != 0){
 			break;
 		}
 		nbloqueMB++;
@@ -446,7 +447,6 @@ int leer_inodo(unsigned int ninodo, inode *inodo){
  */
 int reservar_inodo(unsigned char tipo, unsigned char permisos){
 	mi_waitSem();
-
 	superblock SB;
 	bread(SBPOS, &SB);
 
@@ -586,8 +586,8 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 		//Punters directes
 		if(ptr == 0){
 	    	if(!reserve){
-				if(reserve) mi_signalSem();
-				return FALLO;
+          mi_signalSem();
+          return FALLO;
 			}
 			
 	    	ptr = reservar_bloque();
@@ -612,7 +612,7 @@ int translate_inode_block(unsigned int ninode, unsigned int logicblock, bool res
 	    	block = get_block_index(logicblock, rank+arr);
 		    if(ptr == 0){
 				if(!reserve){
-					if(reserve) mi_signalSem();
+					mi_signalSem();
 					return FALLO;
 				}
 

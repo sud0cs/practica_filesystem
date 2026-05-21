@@ -87,6 +87,7 @@ int bumount(){
 */
 int bwrite(unsigned int nbloque, const void *buf){
     //Nos situamos en el byte inicial del bloque nbloque (mueve el puntero del fichero)
+
     if(lseek(descriptor, nbloque * BLOCKSIZE, SEEK_SET) == -1){
         pperror("Error en bwrite() -> lseek(): %s\n", &ERROR_STYLE, strerror(errno));
         return FALLO;
@@ -94,13 +95,13 @@ int bwrite(unsigned int nbloque, const void *buf){
 
     //Escribimos el bloque (CLOCKSIZE byte)
     int resp = write(descriptor, buf, BLOCKSIZE);
-
     if(resp == -1){
         pperror("Error en bwrite() -> write(): %s\n", &ERROR_STYLE, strerror(errno));
         return FALLO;
     }
 
     return resp; //Si todo va bien, será BLOCKSIZE
+                 //
 }
 
 /*
@@ -125,7 +126,6 @@ int bread(unsigned int nbloque, void *buf){
 
     //Leemos BLOCKSIZE bytes
     int leidos = read(descriptor, buf, BLOCKSIZE);
-
     if(leidos == -1){
         pperror("Error en bread() -> read(): %s\n", &ERROR_STYLE, strerror(errno));
         return FALLO;

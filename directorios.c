@@ -138,7 +138,9 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
     if(cant_entradas_inodo>0){
         //Recorremos todas las entradas del directorio buscando coincidencia con "inicial"
 	    while((num_entrada_inodo<cant_entradas_inodo) && found==false){
-	        if(offset%BLOCKSIZE==0)mi_read_f(*p_inodo_dir, buffer, offset, BLOCKSIZE);
+	        if(offset%BLOCKSIZE<sizeof(entrada)){
+            mi_read_f(*p_inodo_dir, buffer, offset, BLOCKSIZE);
+          }
 	        _entrada = buffer[num_entrada_inodo%(sizeof(buffer)/sizeof(entrada))];
 	        offset+=sizeof(entrada);
 		if(strcmp(_entrada.nombre, inicial)==0){
@@ -158,7 +160,8 @@ int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsign
 	        return ERROR_PERMISO_ESCRITURA;
 	    }
         //Inicializamos nueva entrada con el nombre "inicial"
-	    memcpy(_entrada.nombre, inicial, sizeof(inicial));
+      memset(&_entrada, 0, sizeof(_entrada));
+	    strcpy(_entrada.nombre, inicial);
         
         //Reservar inodo según tipo
 	    if(tipo == 'd'){
@@ -265,11 +268,9 @@ int mi_dir(const char *camino, char *str){
     unsigned int p_inodo = 0;
     unsigned int p_entrada = 0;
     unsigned int offset = 0;
-    superblock SB;
-    bread(SBPOS, &SB);
     inode inodo;
     struct STAT stat_entrada;
-    unsigned int p_inodo_dir = SB.rootInode;
+    unsigned int p_inodo_dir = 0;
 
     //Buscar la entrada correspondiete al camino
     int err = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
@@ -297,15 +298,16 @@ int mi_dir(const char *camino, char *str){
 	    return EXITO;
     }
     memset(out, 0, BLOCKSIZE);
-    unsigned int strsize = 0;
+    char *_str = str;
     //Si es un directorio, recorremos todas sus entradas
     while(offset<inodo.logicByteSize){
-	    if(offset%BLOCKSIZE == 0)mi_read_f(p_inodo, buffer, offset, BLOCKSIZE);
-	    
+	    if(offset%BLOCKSIZE<sizeof(entrada)){
+        mi_read_f(p_inodo, buffer, offset, BLOCKSIZE);
+      }
         _entrada = buffer[(offset%BLOCKSIZE)/sizeof(entrada)];
 	    mi_stat_f(_entrada.ninodo, &stat_entrada);
 	    
-        strsize += sprintf(out, "%c|%c%c%c|%s|%dB|%s|",
+        _str += sprintf(_str, "%c|%c%c%c|%s|%dB|%s|",
 		stat_entrada.tipo,
 		has_perms(stat_entrada.permisos, PERM_READ)?'r':'-',
 		has_perms(stat_entrada.permisos, PERM_WRITE)?'w':'-',
@@ -313,10 +315,7 @@ int mi_dir(const char *camino, char *str){
 		strpl(ctime(&stat_entrada.mtime),"\n", "", 0),
 		stat_entrada.tamEnBytesLog,
 		_entrada.nombre);
-	    
-        if(sizeof(buffer)<strsize)return FALLO;
-	    strcat(str, out);
-	    offset+=sizeof(entrada);
+	      offset+=sizeof(entrada);
     }
     return EXITO;
 }
@@ -330,9 +329,7 @@ int mi_dir(const char *camino, char *str){
 int mi_chmod(const char *camino, unsigned char perms){
     unsigned int p_inodo = 0;
     unsigned int p_entrada = 0;
-    superblock SB;
-    bread(SBPOS, &SB);
-    unsigned int p_inodo_dir = SB.rootInode;
+    unsigned int p_inodo_dir = 0;
     int err = buscar_entrada(camino, &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
     if (err<0)return err;
     return mi_chmod_f(p_inodo, perms);
@@ -349,9 +346,7 @@ int mi_chmod(const char *camino, unsigned char perms){
  *   Código de error si falla
 */
 int mi_stat(const char *camino, struct STAT *p_stat){
-    superblock SB;
-    bread(SBPOS, &SB);
-    unsigned int rootInode = SB.rootInode;
+    unsigned int rootInode = 0;
     unsigned int p_inodo = 0;
     unsigned int p_entrada = 0;
     int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
@@ -404,7 +399,6 @@ int find_cache(const char *camino){
 int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int nbytes){
     int cache_pos = find_cache(camino);
     unsigned int p_inodo = 0;
-
     if(cache_pos>=0){
         //Utilizamos el inodo almacenado en caché
 	    p_inodo = cache.p_inode[cache_pos];
@@ -413,9 +407,7 @@ int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int
 	    #endif
     }else{
         //No está en caché: buscamos la entrada y actualizamos caché
-	    superblock SB;
-	    bread(SBPOS, &SB);
-	    unsigned int rootInode = SB.rootInode;
+	    unsigned int rootInode = 0;
 	    unsigned int p_entrada = 0;
 	    int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
 	    if(err<0)return err;
@@ -424,7 +416,8 @@ int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int
 	    xpperror("\n[ mi_write() -> Actualizar caché ]\n", ORANGE, DEFAULT, false, false);
 	    #endif
     }
-    return mi_write_f(p_inodo, buffer, offset, nbytes);
+    int bytes = mi_write_f(p_inodo, buffer, offset, nbytes);
+    return bytes;
 }
 
 /*
@@ -451,9 +444,7 @@ int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int 
 	    #endif
     }else{
         //No está en caché: buscamos la entrada y actualizamos caché
-	    superblock SB;
-	    bread(SBPOS, &SB);
-	    unsigned int rootInode = SB.rootInode;
+	    unsigned int rootInode = 0;
 	    unsigned int p_entrada = 0;
 	    int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
 	    if(err<0)return err;
@@ -462,7 +453,8 @@ int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int 
 	    xpperror("\n[ mi_read() -> Actualizar caché ]\n", ORANGE, DEFAULT, false, false);
 	    #endif
     }
-    return mi_read_f(p_inodo, buffer, offset, nbytes);
+    int bytes = mi_read_f(p_inodo, buffer, offset, nbytes);
+    return bytes;
 }
 
 /*
@@ -482,11 +474,8 @@ int mi_link(const char *camino1, const char *camino2){
     unsigned int p_entrada1, p_entrada2;
     inode inodo1;
     entrada entrada2;
-    superblock SB;
-
-    bread(SBPOS, &SB);
-    p_inodo_dir1 = SB.rootInode;
-    p_inodo_dir2 = SB.rootInode;
+    p_inodo_dir1 = 0;
+    p_inodo_dir2 = 0;
 
     //Inicio sección critica
     mi_waitSem();
@@ -547,10 +536,7 @@ int mi_unlink(const char *camino){
     unsigned int p_inodo, p_inodo_dir, p_entrada;
     inode inodo, inodo_dir;
     entrada ultima;
-    superblock SB;
-
-    bread(SBPOS, &SB);
-    p_inodo_dir = SB.rootInode;
+    p_inodo_dir = 0;
 
     //Inicio sección critica
     mi_waitSem();
