@@ -51,9 +51,28 @@ int main(int argc, char **argv){
 	    return FALLO;
     }
 
-    //Crear el directorio
-    print_dir_error(mi_creat(path, perms));
-
+    if(arg_exists("p")){
+      char path_segment[strlen(path)+1];
+      char *ptr = path;
+      char *ptr_segment = path_segment;
+      while(*ptr!='\0'){
+        *ptr_segment = *ptr;
+        if(*ptr == '/' && ptr!=path){
+          *(ptr_segment+sizeof(char)) = '\0';
+          int err = mi_creat(path_segment, perms);
+          if(err<0){
+            print_dir_error(err);
+            bumount();
+            return FALLO;
+          }
+        }
+        ptr+=sizeof(char);ptr_segment+=sizeof(char);
+      }
+    }
+    else{
+      //Crear el directorio
+      print_dir_error(mi_creat(path, perms));
+    }
     //Desmontar el disco
     bumount();
     free_args();

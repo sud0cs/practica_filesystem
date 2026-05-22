@@ -1,6 +1,6 @@
 #include "directorios.h"
 #include "argparse.h"
-#define BUFFERSIZE 4096
+#define BUFFERSIZE 8192
 #define PATHSIZE 1024
 
 /*
@@ -28,7 +28,7 @@ void tree(char *path, unsigned int depth){
     //Sangrado visual según profundidad
     char space[depth*2+1];
     memset(space, ' ', sizeof(space));
-    
+    space[depth*2]='\0';
     //Obtener listado del directorio
     int err = mi_dir(path, buffer);
     if(err<0){
