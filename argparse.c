@@ -33,9 +33,16 @@ void init_parser(unsigned int max_args, int _argc, char **_argv){
   }
 }
 
+arg* find_arg(char *name){
+  for(int i = 0; i<arg_count; i++){
+      if(strcmp(name, args[i].name)==0)return &args[i];
+  }
+  return NULL;
+}
+
 void add_arg(char *name, bool mandatory, arg_type type, char* description){
   arg _arg;
-  if(strcmp(name, "") == 0)return;
+  if(strcmp(name, "") == 0 || find_arg(name)!=NULL || (mandatory && type==NONE))return;
   _arg.name = name;
   _arg.mandatory = mandatory;
   _arg.content = NULL;
@@ -52,24 +59,24 @@ void print_help(){
   }
   printf("\n---------------------\n\n");
   for(int i = 0; i<arg_count; i++){
-    if(args[i].mandatory){xpprint("<%s>", DEFAULT, DEFAULT, true, false, args[i].name);printf(": %s\n", args[i].description);}
+    if(args[i].mandatory){xpprint("<%s> [%s]", DEFAULT, DEFAULT, true, false, args[i].name, get_type_name(args[i].type));printf(": %s\n", args[i].description);}
     else {
       if(args[i].type==NONE){xpprint("-%s", DEFAULT, DEFAULT, true, false, args[i].name);printf(": %s\n", args[i].description);}
-      else{xpprint("-%s <%s>", DEFAULT, DEFAULT, true, false, args[i].name, get_type_name(args[i].type));printf(": %s\n", args[i].description);}
+      else{xpprint("-%s [%s]", DEFAULT, DEFAULT, true, false, args[i].name, get_type_name(args[i].type));printf(": %s\n", args[i].description);}
     } 
   }
 }
 
-arg* find_arg(char *name){
-  for(int i = 0; i<arg_count; i++){
-      if(strcmp(name, args[i].name)==0)return &args[i];
+bool arg_name_in_argv(arg _arg, int i){
+  for(;i<argc; i++){
+    if(argv[i][0]=='-' && strcmp(strpl(argv[i], "-", "", 1), _arg.name)==0)return true;
   }
-  return NULL;
+  return false;
 }
 
-arg* find_empty_mandatory_arg(){
+arg* find_empty_mandatory_arg(int argv_i){
   for(int i = 0; i<arg_count; i++){
-    if(args[i].mandatory && args[i].content == NULL)return &args[i];
+    if(args[i].mandatory && args[i].content == NULL && !arg_name_in_argv(args[i], argv_i))return &args[i];
   }
   return NULL;
 }
@@ -82,7 +89,7 @@ int parse_args(){
     offset = 1;
     _arg = find_arg(strpl(argv[i], "-", "", 1));
     if (_arg==NULL || argv[i][0]!='-'){
-      _arg = find_empty_mandatory_arg();
+      _arg = find_empty_mandatory_arg(i);
       if(_arg == NULL)continue;
       offset = 0;
     }
@@ -148,4 +155,5 @@ void free_args(){
       }
       free(args[i].content);
     }
+    free(argv);
 }
