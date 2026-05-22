@@ -1,4 +1,5 @@
 #include "directorios.h"
+#include "argparse.h"
 #define BUFFERSIZE 4096
 #define PATHSIZE 1024
 
@@ -82,18 +83,23 @@ void tree(char *path, unsigned int depth){
 */
 int main(int argc, char **argv){
     //Comprobar número de argumentos
-    if(argc<3){
-	    fprintf(stderr, "mi_ls <disco> <path>\n");
-	    return FALLO;
-    }
+    init_parser(2, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco a crear");
+    add_arg("path", true, STRING, "Ruta a partir de la cual mostrar el árbol de contenidos");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
+    }  
 
     //Montar el disco virtual
-    bmount(argv[1]);
+    bmount(arg_value("disco"));
 
     //Mostrar árbol
-    tree(argv[2], 1);
+    tree(arg_value("path"), 1);
 
     //Desmontar disco
     bumount();
+    free_args();
     return EXITO;
 }

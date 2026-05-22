@@ -4,7 +4,7 @@
 #include "time.h"
 #include <sys/wait.h>
 #include <signal.h>
-
+#include "argparse.h"
 int acabados = 0;
 
 void reaper(){
@@ -16,9 +16,11 @@ void reaper(){
 }
 
 int main(int argc, char** argv){
-  
-  if(argc<2){
-    fprintf(stderr, "./simulacion <disco>");
+  init_parser(1, argc, argv);
+  add_arg("disco", true, STRING, "Nombre del disco");
+  if(parse_args()==MISSING_ARGS_ERROR){
+    print_help();
+    return FALLO;
   }
 
   time_t c_time = time(NULL);
@@ -29,7 +31,7 @@ int main(int argc, char** argv){
   strftime(path_parent, sizeof(path_parent), "/simul_%Y%m%d%H%M%S/", tmctime);
 char path_child[1024];
   //create directory
-  if(bmount(argv[1]) == FALLO){
+  if(bmount(arg_value("disco")) == FALLO){
     return FALLO;
   }
   err = mi_creat(path_parent, PERM_READ | PERM_WRITE);
@@ -43,7 +45,9 @@ char path_child[1024];
     srand(time(NULL) + getpid());
     if(pid==0){
       int id = i+1;
-      bmount(argv[1]);
+      if(bmount(arg_value("disco")) == FALLO){
+        return FALLO;
+      }
       memset(path_child, 0, sizeof(path_child));
       //se crean el directorio y el archivo en el que almacenar los datos
       strncpy(path_child, path_parent, 1024);
@@ -90,5 +94,6 @@ char path_child[1024];
     pause();
   }
   bumount();
+  free_args();
   return 0;
 }

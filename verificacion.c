@@ -2,6 +2,7 @@
 #include "simulacion.h"
 #include "directorios.h"
 #include <time.h>
+#include "argparse.h"
 typedef struct {
   int pid;
   unsigned int nEscrituras;
@@ -14,24 +15,28 @@ typedef struct {
 #define MAXOFFSET sizeof(REGISTRO)*REGMAX
 
 int main(int argc, char **argv){
-  if(argc<3){
-    fprintf(stderr, "./verificacion <disco> <ruta simulación>");
+  init_parser(3, argc, argv);
+  add_arg("disco", true, STRING, "Nombre del disco");
+  add_arg("path", true, STRING, "Ruta de la simulación a verificar");
+  if(parse_args()==MISSING_ARGS_ERROR){
+    print_help();
     return FALLO;
   }
-  if(bmount(argv[1]) == FALLO){
+  if(bmount(arg_value("disco")) == FALLO){
     return FALLO;
   }
   char output_path[1024];
+  char *sim_path = arg_value("path");
   struct STAT stat;
-  mi_stat(argv[2], &stat);
+  mi_stat(sim_path, &stat);
   if(stat.tamEnBytesLog/sizeof(entrada)!=PROCESOS){
     xpperror("ERROR: el número de entradas no coincide con el número de procesos", RED, DEFAULT, true, false);
   }
-  if(argv[2][strlen(argv[2])-1] == '/')argv[2][strlen(argv[2])-1]='\0';
+  if(sim_path[strlen(sim_path)-1] == '/')sim_path[strlen(sim_path)-1]='\0';
   char dir_buffer[8192];
   char *ptr = dir_buffer;
-  mi_dir(argv[2], dir_buffer);
-  sprintf(output_path, "%s/informe.txt", argv[2]);
+  mi_dir(sim_path, dir_buffer);
+  sprintf(output_path, "%s/informe.txt", sim_path);
   mi_creat(output_path, PERM_READ | PERM_WRITE);
   
   char *token = strtok_r(dir_buffer, "|", &ptr);
@@ -52,7 +57,7 @@ int main(int argc, char **argv){
       info.pid = atoi(token);
       info.nEscrituras = 0;
       memset(data_path, 0, sizeof(data_path));
-      sprintf(data_path, "%s/%s/data.dat", argv[2], token);
+      sprintf(data_path, "%s/%s/data.dat", sim_path, token);
       buffer_offset = 0;
       while(buffer_offset<MAXOFFSET){
         memset(regbuffer, 0, sizeof(regbuffer));
@@ -88,5 +93,6 @@ int main(int argc, char **argv){
   printf("Output file: ");
   xpprint("%s", BLUE, DEFAULT, false, false, output_path);
   bumount();
+  free_args();
   return 0;
 }

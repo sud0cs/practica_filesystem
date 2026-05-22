@@ -1,4 +1,5 @@
 #include "directorios.h"
+#include "argparse.h"
 #define TAMBUFFER BLOCKSIZE*4
 
 /*
@@ -20,14 +21,19 @@
 */
 int main(int argc, char **argv){
     //Comprobar número de argumentos
-    if(argc<3){
-	    fprintf(stderr, "mi_escribir <disco> <path>\n");
-	        return FALLO;
+    
+    init_parser(2, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("path", true, STRING, "Ruta del archivo del cual mostrar sus datos");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
 
     //Montar el disco virtual
-    if(bmount(argv[1]) == FALLO){
-        fprintf(stderr, "Error: bomunt\n");
+    if(bmount(arg_value("disco")) == FALLO){
+        fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
 
@@ -37,7 +43,7 @@ int main(int argc, char **argv){
     unsigned int p_entrada = 0;
 
     //Comprobar que la ruta existe antes de leer
-    int r = buscar_entrada(argv[2], &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
+    int r = buscar_entrada(arg_value("path"), &p_inodo_dir, &p_inodo, &p_entrada, 0, 0);
     if(r<0){
         print_dir_error(r);
         bumount();
@@ -50,7 +56,7 @@ int main(int argc, char **argv){
     unsigned int leidos, total_leidos = 0;
 
     //Leer mientras queden datos
-    while((leidos=mi_read(argv[2], buffer, offset, TAMBUFFER)) > 0){
+    while((leidos=mi_read(arg_value("path"), buffer, offset, TAMBUFFER)) > 0){
 	    write(1, buffer, leidos); //Escribir por stdout
 	    offset += leidos; //Avanzar offset
         total_leidos += leidos;
@@ -67,4 +73,5 @@ int main(int argc, char **argv){
 
     //Desmontar el disco
     bumount();
+    free_args();
 }

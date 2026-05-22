@@ -1,6 +1,6 @@
 #include "directorios.h"
 #include <stdio.h>
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -21,19 +21,24 @@
  *   Código de error si falla
 */
 int main(int argc, char **argv){
-    if(argc!=4){
-        fprintf(stderr, "Sintaxis: %s <disco> </ruta_original> </ruta_enlace\n", argv[0]);
-        return FALLO;
-    }
-
+    init_parser(3, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("og-path", true, STRING, "Ruta del fichero original");
+    add_arg("link-path", true, STRING, "Ruta del enlace a crear");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
+    }  
+    
     //Montar el disco virtual
-    if(bmount(argv[1])<0){
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
 
     //Intentar crear el enlace duro
-    int r = mi_link(argv[2], argv[3]);
+    int r = mi_link(arg_value("og-path"), arg_value("link-path"));
     if(r<0){
         print_dir_error(r); //Montar error descriptivo
         bumount();
@@ -42,5 +47,6 @@ int main(int argc, char **argv){
 
     //Desmontar el disco
     bumount();
+    free_args();
     return EXITO;
 }

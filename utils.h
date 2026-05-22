@@ -39,6 +39,7 @@ typedef struct{
 
 char *strpl(char *str, char *fnd, char *rpl, int lim);
 char *prettify(char *str,style *s);
+void strlower(char* str);
 void pprint(char *str, style *s, ...);
 void xpprint(char *str, Color fg, Color bg, bool bold, bool underline, ...);
 void pperror(char *str, style *s, ...);

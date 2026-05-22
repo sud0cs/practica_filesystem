@@ -1,6 +1,6 @@
 #include "directorios.h"
 #include <stdio.h>
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -20,19 +20,23 @@
  *   Código de error si falla
 */
 int main(int argc, char **argv){
-    if(argc!=3){
-        fprintf(stderr, "Sintaxis: %s <disco> </ruta>\n", argv[0]);
-        return FALLO;
-    }
+    init_parser(2, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("path", true, STRING, "Ruta del fichero/directorio a eliminar");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
+    }   
 
     //Montar disco virtual
-    if(bmount(argv[1])<0){
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
 
     //Intentar elminar la entrada
-    int r = mi_unlink(argv[2]);
+    int r = mi_unlink(arg_value("path"));
     if(r<0){
         print_dir_error(r); //Mostrar error descriptivo
         bumount();

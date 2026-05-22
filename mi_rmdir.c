@@ -1,6 +1,6 @@
 #include "directorios.h"
 #include <stdio.h>
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -20,19 +20,24 @@
  *   Código de error si falla
 */
 int main(int argc, char **argv){
-    if(argc!=3){
-        fprintf(stderr, "Sintaxis: mi_rmdir <disco> </ruta_directorio>\n");
-        return FALLO;
+    
+    init_parser(2, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("path", true, STRING, "Ruta del directorio a eliminar");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
-
+    
     //Montar el disco virtual
-    if(bmount(argv[1])<0){
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
 
     //Intentar eliminar el directorio
-    int r = mi_unlink(argv[2]);
+    int r = mi_unlink(arg_value("path"));
     if(r==ERROR_NO_SE_PUEDE_CREAR_ENTRADA_EN_UN_FICHERO){
         fprintf(stderr, "Error: El directorio %s no está vacío\n", argv[2]);
     }else if(r<0){
@@ -41,5 +46,6 @@ int main(int argc, char **argv){
 
     //Desmontar el disco
     bumount();
+    free_args();
     return r;
 }

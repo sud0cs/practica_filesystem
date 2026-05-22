@@ -2,7 +2,7 @@
 #include "bloques.h"
 #include "ficheros_basico.h"
 #include "directorios.h"
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -24,7 +24,17 @@
 */
 int main(int argc, char **argv){
   //Convertimos el segundo argumento a entero: numero de bloques del disco
-  int nblocks = atoi(argv[2]);
+  
+  init_parser(2, argc, argv);
+  add_arg("disco", true, STRING, "Nombre del disco");
+  add_arg("nblocks", true, INT, "Número de bloques del disco");
+    
+  if(parse_args()==MISSING_ARGS_ERROR){
+    print_help();
+    return FALLO;
+  }
+  
+  int nblocks = *(int*)arg_value("nblocks");
 
   //Comprovación básica: no podemos crear un disco de 0 bloques
   if(nblocks==0){
@@ -44,7 +54,7 @@ int main(int argc, char **argv){
   memset(buffer, 0, BLOCKSIZE);
 
   //Abrimos(o creamos) el disco virtual
-  if (bmount(argv[1]) == FALLO)return FALLO;
+  if (bmount(arg_value("disco")) == FALLO)return FALLO;
 
   //Escribe todos los bloques del disco a 0
   //Esto deja el fichero completamente limpio
@@ -73,5 +83,6 @@ int main(int argc, char **argv){
   //reserar el inodo raíz
   reservar_inodo('d', 7);
   //Cerramos el disco virtual
+  free_args();
   return bumount();
 }

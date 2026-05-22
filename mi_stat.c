@@ -1,5 +1,5 @@
 #include "directorios.h"
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -18,14 +18,18 @@
  *   FALLO(-1) si ocurre algún error
 */
 int main(int argc, char **argv){
-    //Comprobar número de argumentos
-    if(argc<3){
-    	printf("mi_stat <disco> <path>\n");
-	    return FALLO;
+    
+    init_parser(2, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("path", true, STRING, "Ruta del fichero/directorio del cual mostrar los datos");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
-
+    
     //Montar el disco virtual
-    if(bmount(argv[1])<0){
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
@@ -33,14 +37,14 @@ int main(int argc, char **argv){
     struct STAT st;
     
     //Obtener información del inodo asociado a la ruta
-    int ninodo = mi_stat(argv[2], &st);
+    int ninodo = mi_stat(arg_value("path"), &st);
     if(ninodo<0){
     	print_dir_error(ninodo);
 	    return FALLO;
     }
 
     //Crear una línea inferior de cierre hecha de '#'
-    int len = strlen(argv[2]);
+    int len = strlen(arg_value("path"));
     char down[len+39];
     memset(down, '#', sizeof(down));
     down[len+38] = '\0';
@@ -65,5 +69,6 @@ int main(int argc, char **argv){
 
     //Desmontar el disco
     bumount();
+    free_args();
     return EXITO;
 }

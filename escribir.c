@@ -1,7 +1,7 @@
 #include "ficheros.h"
 #include <string.h>
 #include <stdio.h>
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -24,16 +24,21 @@
  *  FALLO(-1) si hay error
 */
 int main(int argc, char **argv){
-    if(argc != 4){
-        fprintf(stderr,
-            "Sintaxis: escribir <nombre_dispositivo> <\"$(cat fichero)\"> <diferentes_inodos>\n"
-            "Offsets: 9000, 209000, 30725000, 409605000, 480000000\n"
+    init_parser(3, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("texto", true, STRING, "Texto a escribir");
+    add_arg("diferentes_inodos", true, INT, "Si es 0 reserva un solo inodo para todos los offsets");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      fprintf(stderr,
+            "\nOffsets: 9000, 209000, 30725000, 409605000, 480000000\n"
             "Si diferentes_inodos=0 se reserva un solo inodo para todos los offsets\n");
-        return FALLO;
+      return FALLO;
     }
-    char *disco = argv[1];
-    char *texto = argv[2];
-    int diferentes_inodos = atoi(argv[3]);
+    char *disco = arg_value("disco");
+    char *texto = arg_value("texto");
+    int diferentes_inodos = *(int*)arg_value("diferentes_inodos");
 
     //Montar el disco virtual
     if(bmount(disco) == FALLO) return FALLO;
@@ -87,5 +92,6 @@ int main(int argc, char **argv){
     }
     //Desmontar el disco
     bumount();
+    free_args();
     return 0;
 }

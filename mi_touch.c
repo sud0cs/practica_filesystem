@@ -1,5 +1,5 @@
 #include "directorios.h"
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -23,18 +23,21 @@
 */
 int main(int argc, char **argv){
     //Comprobar número de argumentos
-    if(argc<4){
-    	printf("mi_touch <disco> <path> <permisos>");
-	    return EXITO;
-    }
-
-    //Montar el disco virtual
-    if(bmount(argv[1])<0){
+    init_parser(3, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("perms", true, INT, "Permisos del fichero");
+    add_arg("path", true, STRING, "Ruta del fichero a crear");
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
+    }  
+      //Montar el disco virtual
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
 
-    char *path = argv[3];
+    char *path = arg_value("path");
     
     //Touch no puede crear directorios -> error si termina en '/'
     if(path[strlen(path)-1] == '/'){
@@ -44,7 +47,7 @@ int main(int argc, char **argv){
     }
 
     //Convertir permsos
-    int perms = atoi(argv[2]);
+    int perms = *(int*)arg_value("perms");
 
     //Validar permisos
     if(perms>7 || perms<0){
@@ -58,5 +61,6 @@ int main(int argc, char **argv){
 
     //Desmontar el disco
     bumount();
+    free_args();
     return EXITO;
 }

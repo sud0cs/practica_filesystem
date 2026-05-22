@@ -1,5 +1,5 @@
 #include "directorios.h"
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -21,19 +21,26 @@
 */
 int main(int argc, char **argv){
     //Comprobar número de argumentos
-    if(argc<4){
-	    printf("mi_mkdir <disco> <permisos> <path>\n*nota: mkdir imita el comportamiento del programa de linux por lo tanto aunque el path no acabe en / creará un directorio.\nPara crear archivos utilizar mi_touch");
-	    return EXITO;
-    }
+    
+    init_parser(4, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("perms", true, INT, "Número del inodo a leer");
+    add_arg("path", true, STRING, "Ruta del nuevo directorio");
+    add_arg("p", false, NONE, "Crea todos los directorios inexistentes en la ruta");
 
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
+    }
+  
     //Montar el disco virtual
-    if(bmount(argv[1])<0){
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
     
-    char *path = argv[3];
-    char perms = atoi(argv[2]);
+    char *path = arg_value("path");
+    char perms = *(int*)arg_value("perms");
 
     //Si el path no termina en '/', añadirlo
     if(path[strlen(path)-1] != '/')strcat(path, "/");
@@ -49,5 +56,6 @@ int main(int argc, char **argv){
 
     //Desmontar el disco
     bumount();
+    free_args();
     return EXITO;
 }

@@ -1,5 +1,5 @@
 #include "directorios.h"
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -22,28 +22,28 @@
 */
 int main(int argc, char **argv){
     //Comprobar número mínimo de argumentos
-    if(argc<3){
-	    printf("mi_ls <disco> <path>\n");
-	    return FALLO;
+
+    init_parser(3, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("path", true, STRING, "Ruta de la cual mostrar los contenidos");
+    add_arg("l", false, NONE, "Lista los datos de los directorios/archivos");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
 
     //Comprobar si se usa el modo detallado(-l)
-    int detailed = detailed = strcmp(argv[1],"-l") == 0;
-
-    //Si hay 4 argumentos pero no se ha usado -l -> error
-    if(argc==4 && !detailed){
-	    printf("mi_ls <disco> <path>\n");
-	    return FALLO;
-    }
+    bool detailed = arg_exists("l");
 
     //Montar el disco (el índice depende de si hay -l)
-    if(bmount(argv[1+detailed])<0){
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
 
     //Ruta del directorio a listar
-    char *path = argv[2+detailed];
+    char *path = arg_value("path");
 
     //Buffer donde mi_dir() devolverá la información
     char buffer[8192];
@@ -97,10 +97,9 @@ int main(int argc, char **argv){
 	    i++;
     }
     //Imprimir total
-    //if(detailed) printf("Total: %d\n, total");
-    //else printf("Total: %d\n", total);
     printf("Total:%d\n", total);
 
     //Desmontar el disco
     bumount();
+    free_args();
 }

@@ -2,7 +2,7 @@
 #include "ficheros_basico.h"
 #include "utils.h"
 #include "directorios.h"
-
+#include "argparse.h"
 /*
  * mostrar_buscar_entrada()
  * ----------------------------------------------------------
@@ -41,7 +41,7 @@ void mostrar_buscar_entrada(char *camino, char reservar){
  *   - El tamaño de las estructuras (superblock e inode)
  *   - La lista enlazada de inodos libres
  * 
- * Este programa se usa para comprobar que mi_mks() ha inicializado
+ * Este programa se usa para comprobar que mi_mkfs() ha inicializado
  * correctamente el sistema de ficheros.
  * 
  * Parámetros:
@@ -52,16 +52,20 @@ void mostrar_buscar_entrada(char *camino, char reservar){
  *   FALLO (-1) si ocurre algún error
 */
 int main(int argc, char **argv){
-    superblock SB;
-
-    //Comprobar sintaxis
-    if(argc != 2){
-        fprintf(stderr, "Sintaxis: leer_sf <disco>\n");
-        return FALLO;
+    init_parser(1, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
 
+    superblock SB;
+
+    //Comprobar sintaxis  
+
     //Intentamos montar el disco vitual
-    if (bmount(argv[1]) == FALLO){
+    if (bmount(arg_value("disco")) == FALLO){
 	    xpperror("Could not mount disk", RED, DEFAULT, true, false);
     }
 
@@ -90,4 +94,5 @@ int main(int argc, char **argv){
     
     //Desmontar el disco
     bumount();
+    free_args();
 }

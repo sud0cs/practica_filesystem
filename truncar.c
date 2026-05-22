@@ -1,6 +1,6 @@
 #include "ficheros.h"
 #include "utils.h"
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -21,16 +21,22 @@
  *  FALLO(-1) si ocurre algún error
  */
 int main(int argc, char **argv){
-    if(argc != 4){
-	fprintf(stderr, "Sintaxis: truncar <disco> <ninodo> <nbytes>\n");
-	return FALLO;
+    init_parser(3, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("ninodo", true, INT, "Número del inodo a truncar");
+    add_arg("bytes", true, INT, "Nuevo tamaño logico en bytes");
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
 
     //Montar el disco virtual
-    bmount(argv[1]);
+    if(bmount(arg_value("disco"))<0){
+      return FALLO;
+    }
 
-    unsigned int ninodo = atoi(argv[2]);
-    unsigned int nbytes = atoi(argv[3]);
+    unsigned int ninodo = *(int*)arg_value("ninodo");
+    unsigned int nbytes = *(int*)arg_value("bytes");
     
     /*
      * Si nbytes==0: liberar el inodo completo.
@@ -66,4 +72,5 @@ int main(int argc, char **argv){
     
     //Desmontamos el disco
     bumount();
+    free_args();
 }

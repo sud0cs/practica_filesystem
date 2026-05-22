@@ -1,5 +1,5 @@
 #include "ficheros.h"
-
+#include "argparse.h"
 
 /*
  * main()
@@ -19,19 +19,22 @@
  *  FALLO(-1) si hay error
 */
 int main(int argc, char **argv){
-    if(argc != 4){
-        fprintf(stderr, "Sintaxis: permitir <disco> <ninodo> <permisos>\n");
-        return FALLO;
-    }
-
+    init_parser(3, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("ninodo", true, INT, "Número del inodo al que cambiar los permiso");
+    add_arg("perms", true, INT, "Nuevos permisos (0-7)");
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
+    }    
     //Montar el disco virtual
-    if(bmount(argv[1])<0){
+    if(bmount(arg_value("disco"))<0){
         fprintf(stderr, "Error: bmount\n");
         return FALLO;
     }
     
-    unsigned int ninodo = atoi(argv[2]);
-    unsigned char permisos = atoi(argv[3]);
+    unsigned int ninodo = *(int*)arg_value("ninodo");
+    unsigned char permisos = *(int*)arg_value("perms");
 
     /*
      * mi_chmof_f()
@@ -46,5 +49,6 @@ int main(int argc, char **argv){
 
     //Desmontar el disco
     bumount();
+    free_args();
     return r;
 }

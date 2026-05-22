@@ -1,5 +1,5 @@
 #include "directorios.h"
-
+#include "argparse.h"
 /*
  * main()
  * ----------------------------------------------------------
@@ -21,20 +21,27 @@
 */
 int main(int argc, char **argv){
     //Comprobar número de argumentos
-    if(argc<5){
-	    fprintf(stderr, "mi_escribir <disco> <path> <texto> <offset>\n");
-	    return FALLO;
+
+    init_parser(4, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("path", true, STRING, "Ruta del archivo en el que escribir");
+    add_arg("texto", true, STRING, "Texto a escribir");
+    add_arg("offset", true, INT, "offset dentro del fichero");
+
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
 
     //Montar el disco virtual
-    if(bmount(argv[1]) == FALLO) return FALLO;
+    if(bmount(arg_value("disco")) == FALLO) return FALLO;
 
     //Convertir offset a entero
-    int offset = atoi(argv[4]);
+    int offset = *(int*)arg_value("offset");
 
     //Escribir el texto en el fichero indicado
-    int escritos = mi_write(argv[2], argv[3], offset, strlen(argv[3]));
-    printf("longitud texto: %d\n", (int)strlen(argv[3]));
+    int escritos = mi_write(arg_value("path"), arg_value("texto"), offset, strlen(arg_value("texto")));
+    printf("longitud texto: %d\n", (int)strlen(arg_value("texto")));
     printf("Bytes escritos: %d\n", escritos);
     
     //Comprobar errores de escritura
@@ -46,4 +53,5 @@ int main(int argc, char **argv){
     
     //Desmontar el disco
     bumount();
+    free_args();
 }

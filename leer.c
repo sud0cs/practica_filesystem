@@ -1,7 +1,7 @@
 #include "ficheros.h"
 #include <string.h>
 #include <unistd.h>
-
+#include "argparse.h"
 #define TAMBUFFER 1500
 
 /*
@@ -22,15 +22,19 @@
  *  FALLO(-1) si hay error
 */
 int main(int argc, char **argv){
-    if(argc != 3){
-        fprintf(stderr, "Sintaxis: leer <disco> <ninodo>\n");
-        return FALLO;
+    init_parser(2, argc, argv);
+    add_arg("disco", true, STRING, "Nombre del disco");
+    add_arg("ninodo", true, INT, "Número del inodo a leer");
+    
+    if(parse_args()==MISSING_ARGS_ERROR){
+      print_help();
+      return FALLO;
     }
 
     //Montar el disco virtual
-    if(bmount(argv[1]) == FALLO) return FALLO;
+    if(bmount(arg_value("disco")) == FALLO) return FALLO;
 
-    unsigned int ninodo = atoi(argv[2]);
+    unsigned int ninodo = *(int*)arg_value("ninodo");
     char buffer[TAMBUFFER];
     int offset = 0;
     int leidos = 0;
