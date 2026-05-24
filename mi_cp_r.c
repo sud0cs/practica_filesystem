@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+ * copy_file()
+ * ----------------------------------------------------------
+ * Copia un fichero origen a uno destino.
+*/
 int copy_file(const char *src, const char *dst){
     char buffer[BLOCKSIZE];
     int offset = 0;
@@ -15,19 +20,35 @@ int copy_file(const char *src, const char *dst){
     return EXITO;
 }
 
+/*
+ * cp_recursive()
+ * ----------------------------------------------------------
+ * Copia recursivamente un dorectorio i todo su contenido.
+ * 
+ * Funcionamiento:
+ *   Si mi_dir() falla-> es fichero-> copiarlo
+ *   Si es directorio:
+ *    - Crear directorio destino
+ *    - Tokenizar mi_dir()
+ *    - Por cada entrada, copiar recursivamente
+ * 
+ * Parámetros:
+ *   src-> ruta origen
+ *   dst-> ruta destino
+*/
 int cp_recursive(const char *src, const char *dst){
     char buffer[4096];
     memset(buffer, 0, sizeof(buffer));
 
     int r = mi_dir(src, buffer);
 
-    //Si no es directorio → copiar fichero
+    //Si no es directorio -> copiar fichero
     if(r<0) return copy_file(src, dst);
 
-    // Crear directorio destino
+    //Crear directorio destino
     mi_creat(dst, 7);
 
-    // Tokenizar
+    //Tokenizar contenido
     char temp[4096];
     strcpy(temp, buffer);
 
@@ -54,6 +75,16 @@ int cp_recursive(const char *src, const char *dst){
     return EXITO;
 }
 
+/*
+ * main()
+ * ----------------------------------------------------------
+ * Copia recursivamente un direcotrio i todo su contenido.
+ * 
+ * Parámetros:
+ *   disco STRING
+ *   src STRING
+ *   dst STRING
+*/
 int main(int argc, char **argv){
     init_parser(3, argc, argv);
     add_arg("disco", true, STRING, "Nombre del disco virtual");
@@ -69,6 +100,7 @@ int main(int argc, char **argv){
     char *src = arg_value("src");
     char *dst = arg_value("dst");
 
+    //Montar disco
     if(bmount(disco)<0){
         fprintf(stderr, "Error: bmount\n");
         free_args();
