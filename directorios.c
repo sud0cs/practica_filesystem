@@ -5,7 +5,7 @@
 #include <sys/time.h>
 
 //Se selecciona el tipo de cache y se guardan las funciones en el struct
-//De este modo todas las funciones pueden utilizar la cache sin necesidad de saber que tipo de cache es
+//De este modo todas las funciones pueden utilizar la cache sin necesidad de saber que tipo de cache es con cache.find() y cache.update()
 dynamic_cache cache;
 #define CACHE_TYPE LRU_CACHE
 #if CACHE_TYPE == FIFO_CACHE
@@ -377,10 +377,10 @@ int mi_stat(const char *camino, struct STAT *p_stat){
 }
 
 /*
- * update_cache()
+ * update_fifo()
  * ----------------------------------------------------------
  * Inserta un nuevo camino y su inodo asociado en la cache circular.
- * Si la caché está llea, sobreescribe la entrada más antigua.
+ * Si la caché está llea, sobreescribe la entrada más antigua por índice.
 */
 void update_fifo(const char *camino, unsigned int p_inodo, char rw_type){
     fifo_cache *_cache = (fifo_cache*)cache.data;
@@ -392,10 +392,11 @@ void update_fifo(const char *camino, unsigned int p_inodo, char rw_type){
 }
 
 /*
- * find_cache()
+ * find_fifo()
  * ----------------------------------------------------------
- * Busca un camino en la caché.
+ * Busca un camino en la caché tipo fifo.
  * Devuelve la posición si existe, o -1 si no está.
+ * cambia el valor de p_inodo al p_inodo a la que apunta la cache
  */
 int find_fifo(const char *camino, unsigned int *p_inodo, char rw_type){
     fifo_cache *_cache = (fifo_cache*)cache.data;
@@ -421,6 +422,9 @@ int find_fifo(const char *camino, unsigned int *p_inodo, char rw_type){
 /*
  * find_lru()
  * ----------------------------------------------------------
+ * Busca un camino en la caché tipo LRU.
+ * Devuelve la posición si existe, o -1 si no está.
+ * cambia el valor de p_inodo al p_inodo a la que apunta la cache
  */
 int find_lru(const char *camino, unsigned int *p_inodo, char rw_type){
     lru_cache *_cache = (lru_cache*)cache.data;
@@ -433,11 +437,18 @@ int find_lru(const char *camino, unsigned int *p_inodo, char rw_type){
     return -1;
 }
 
+/*
+ * update_lru()
+ * ----------------------------------------------------------
+ * Inserta un nuevo camino y su inodo asociado en la cache tipo RLU.
+ * Si la caché está llea, sobreescribe la entrada más antigua por tiempo.
+*/
 void update_lru(const char *camino, unsigned int p_inodo, char rw_type){
     lru_cache *_cache = (lru_cache*)cache.data;
     struct timeval c_time;
     gettimeofday(&c_time, NULL);
     
+    //Si el camino ya existe en la caché, actualizar el tiempo del último acceso
     for(int i = 0; i < _cache->items; ++i){
         if(strcmp(_cache->path[i], camino) == 0){
             _cache->last_access_time[i] = c_time;
@@ -448,7 +459,9 @@ void update_lru(const char *camino, unsigned int p_inodo, char rw_type){
     unsigned int pos;
     if(_cache->items < CACHE_SIZE){
         pos = _cache->items++;
-    } else {
+    }
+    //buscar la entrada más antigua si la cache está llena
+    else {
         unsigned int min_time = 0;
         for(unsigned i = 1; i < CACHE_SIZE; ++i){
             if(_cache->last_access_time[i].tv_usec>_cache->last_access_time[min_time].tv_usec){
@@ -463,7 +476,13 @@ void update_lru(const char *camino, unsigned int p_inodo, char rw_type){
     _cache->last_access_time[pos] = c_time;
 }
 
-
+/*
+ * find_last_rw()
+ * ----------------------------------------------------------
+ * Busca un camino en la caché tipo última lectura y última escritura.
+ * Devuelve 0 si existe, o -1 si no está.
+ * cambia el valor de p_inodo al p_inodo a la que apunta la cache
+ */
 int find_last_rw(const char *camino, unsigned int *p_inodo, char rw_type){
     last_rw_cache *_cache = (last_rw_cache*)cache.data;
     if((rw_type == 'R' || rw_type == 'r') && strcmp(_cache->path_r, camino) == 0){ 
@@ -477,6 +496,11 @@ int find_last_rw(const char *camino, unsigned int *p_inodo, char rw_type){
     return -1;
 }
 
+/*
+ * update_last_rw()
+ * ----------------------------------------------------------
+ * Guarda la última lectura o escritura en la caché de tipo update_last_rw
+*/
 void update_last_rw(const char *camino, unsigned int p_inodo, char rw_type){
     last_rw_cache *_cache = (last_rw_cache*)cache.data;
     if(rw_type == 'R' || rw_type == 'r'){
