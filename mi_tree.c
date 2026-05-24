@@ -41,24 +41,34 @@ void tree(char *path, unsigned int depth){
     char *token = strtok_r(buffer, "|", &ptr);
     unsigned int i = 0;
     bool isdir = false;
-
+    bool isexec = false;
     while (token != NULL) {
-        //Campo 0: tipo('d' o 'f')
+      //Campo 0: tipo('d' o 'f')
 	    if(i%5 == 0){
 	        isdir = token[0]=='d';
 	    }
 
-        //Campo 4: nombre
+      //campo 1: permisos
+      if(i%5 == 1){
+          isexec = token[2]=='x';
+      }
+
+      //Campo 4: nombre
 	    if(i%5==4){
-	        printf("%s|-%s\n",space,token);
+	        printf("%s|-",space);
 	        //Si es directorio, descender recursivamente
             if(isdir){
+            xpprint("%s\n", BLUE, DEFAULT, false, false, token);
 		        strcpy(newpath, path);
 		        strcat(newpath, token);
 		        strcat(newpath, "/");
 		        tree(newpath,depth+1);
 		        memset(newpath, 0, PATHSIZE);
 	        }
+          else{
+            if(isexec)xpprint("%s\n", GREEN, DEFAULT, false, false, token);
+            else printf("%s\n", token);
+          }
 	    }
 	    token = strtok_r(NULL, "|", &ptr);
 	    i++;

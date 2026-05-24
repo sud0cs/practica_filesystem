@@ -2,9 +2,30 @@
 #include "directorios.h"
 #include <string.h>
 #include <stdio.h>
+#include <sys/time.h>
 
-path_cache cache = {0};
-
+//Se selecciona el tipo de cache y se guardan las funciones en el struct
+//De este modo todas las funciones pueden utilizar la cache sin necesidad de saber que tipo de cache es
+dynamic_cache cache;
+#define CACHE_TYPE LRU_CACHE
+#if CACHE_TYPE == FIFO_CACHE
+      fifo_cache _fifo_cache;
+      void update_fifo(const char *path, unsigned int p_inodo, char rw_type);
+      int find_fifo(const char *path, unsigned int *p_inodo, char rw_type);
+      dynamic_cache cache = {find_fifo, update_fifo, &_fifo_cache};
+#elif CACHE_TYPE == LRU_CACHE
+      lru_cache _lru_cache;
+      void update_lru(const char *path, unsigned int p_inodo, char rw_type);
+      int find_lru(const char *path, unsigned int *p_inodo, char rw_type);
+      dynamic_cache cache = {find_lru, update_lru, &_lru_cache};
+#elif CACHE_TYPE == LAST_RW_CACHE
+      last_rw_cache _last_rw_cache;
+      void update_last_rw(const char *path, unsigned int p_inodo, char rw_type);
+      int find_last_rw(const char *path, unsigned int *p_inodo, char rw_type);
+      dynamic_cache cache = {find_last_rw, update_last_rw, &_last_rw_cache};    
+#else
+#error "Invalid cache type"
+#endif
 /*
  * extraer_camino()
  * ----------------------------------------------------------
@@ -356,40 +377,118 @@ int mi_stat(const char *camino, struct STAT *p_stat){
 }
 
 /*
- * push_cache()
+ * update_cache()
  * ----------------------------------------------------------
- * Inserta un uevo camino y su inodoo asociado en la cache circular.
+ * Inserta un nuevo camino y su inodo asociado en la cache circular.
  * Si la caché está llea, sobreescribe la entrada más antigua.
 */
-void push_cache(const char *camino, unsigned int p_inodo){
-    memset(cache.path[cache.last_item_pos], 0, TAMNOMBRE*MAX_PATH_DEPTH);
-    memcpy(cache.path[cache.last_item_pos], camino, TAMNOMBRE*MAX_PATH_DEPTH);
-    cache.p_inode[cache.last_item_pos] = p_inodo;
-    cache.last_item_pos = (cache.last_item_pos+1)%CACHE_SIZE;
-    if(cache.items<CACHE_SIZE)cache.items++;
+void update_fifo(const char *camino, unsigned int p_inodo, char rw_type){
+    fifo_cache *_cache = (fifo_cache*)cache.data;
+    memset(_cache->path[_cache->last_item_pos], 0, TAMNOMBRE*MAX_PATH_DEPTH);
+    memcpy(_cache->path[_cache->last_item_pos], camino, TAMNOMBRE*MAX_PATH_DEPTH);
+    _cache->p_inode[_cache->last_item_pos] = p_inodo;
+    _cache->last_item_pos = (_cache->last_item_pos+1)%CACHE_SIZE;
+    if(_cache->items<CACHE_SIZE)_cache->items++;
 }
 
 /*
- * find_canche()
+ * find_cache()
  * ----------------------------------------------------------
  * Busca un camino en la caché.
  * Devuelve la posición si existe, o -1 si no está.
  */
-int find_cache(const char *camino){
-    if (cache.items<CACHE_SIZE){
-	    for(int i = 0; i<cache.items; i++){
-	        if(strcmp(cache.path[i%CACHE_SIZE], camino)==0)return i;
+int find_fifo(const char *camino, unsigned int *p_inodo, char rw_type){
+    fifo_cache *_cache = (fifo_cache*)cache.data;
+    if (_cache->items<CACHE_SIZE){
+	    for(int i = 0; i<_cache->items; i++){
+	        if(strcmp(_cache->path[i%CACHE_SIZE], camino)==0){
+            *p_inodo = _cache->p_inode[i];
+            return i;
+          }
 	    }
     }
     else{
-	    for(int i = cache.last_item_pos; i<cache.last_item_pos-CACHE_SIZE; i--){
-	        if(strcmp(cache.path[i%CACHE_SIZE], camino)==0)return i;
+	    for(int i = _cache->last_item_pos; i<_cache->last_item_pos-CACHE_SIZE; i--){
+	        if(strcmp(_cache->path[i%CACHE_SIZE], camino)==0){
+            *p_inodo = _cache->p_inode[i];
+            return i;
+          }
 	    }
     }
     return -1;
 }
 
-//Maybe write a function to get p_inode since the same code is used in both functions?
+/*
+ * find_lru()
+ * ----------------------------------------------------------
+ */
+int find_lru(const char *camino, unsigned int *p_inodo, char rw_type){
+    lru_cache *_cache = (lru_cache*)cache.data;
+    for(int i = 0; i < _cache->items; ++i){
+        if(strcmp(_cache->path[i], camino) == 0){
+            *p_inodo = _cache->p_inode[i];
+            return i;
+        }
+    }
+    return -1;
+}
+
+void update_lru(const char *camino, unsigned int p_inodo, char rw_type){
+    lru_cache *_cache = (lru_cache*)cache.data;
+    struct timeval c_time;
+    gettimeofday(&c_time, NULL);
+    
+    for(int i = 0; i < _cache->items; ++i){
+        if(strcmp(_cache->path[i], camino) == 0){
+            _cache->last_access_time[i] = c_time;
+            return;
+        }
+    }
+
+    unsigned int pos;
+    if(_cache->items < CACHE_SIZE){
+        pos = _cache->items++;
+    } else {
+        unsigned int min_time = 0;
+        for(unsigned i = 1; i < CACHE_SIZE; ++i){
+            if(_cache->last_access_time[i].tv_usec>_cache->last_access_time[min_time].tv_usec){
+                min_time = i;
+            }
+        }
+        pos = min_time;
+    }
+
+    memcpy(_cache->path[pos], camino, TAMNOMBRE*MAX_PATH_DEPTH);
+    _cache->p_inode[pos] = p_inodo;
+    _cache->last_access_time[pos] = c_time;
+}
+
+
+int find_last_rw(const char *camino, unsigned int *p_inodo, char rw_type){
+    last_rw_cache *_cache = (last_rw_cache*)cache.data;
+    if((rw_type == 'R' || rw_type == 'r') && strcmp(_cache->path_r, camino) == 0){ 
+      *p_inodo = _cache->inode_r;
+      return 0;
+    }
+    if((rw_type == 'W' || rw_type == 'w') && strcmp(_cache->path_w, camino) == 0){ 
+      *p_inodo = _cache->inode_w;
+      return 0;
+    }
+    return -1;
+}
+
+void update_last_rw(const char *camino, unsigned int p_inodo, char rw_type){
+    last_rw_cache *_cache = (last_rw_cache*)cache.data;
+    if(rw_type == 'R' || rw_type == 'r'){
+        memcpy(_cache->path_r, camino, sizeof(_cache->path_r));
+        _cache->inode_r = p_inodo;
+    } else {
+        memcpy(_cache->path_w, camino, sizeof(_cache->path_w));
+        _cache->inode_w= p_inodo;
+    }
+}
+
+
 /*
  * mi_write()
  * ----------------------------------------------------------
@@ -397,11 +496,10 @@ int find_cache(const char *camino){
  * Utiliza la caché para acelerar búsquedas repetidas.
 */
 int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int nbytes){
-    int cache_pos = find_cache(camino);
     unsigned int p_inodo = 0;
+    int cache_pos = cache.find(camino, &p_inodo, 'w');
     if(cache_pos>=0){
         //Utilizamos el inodo almacenado en caché
-	    p_inodo = cache.p_inode[cache_pos];
 	    #if DBGLVL9
 	    xpperror("\n[ mi_write() -> Utilizamos datos almacenados en caché ]\n", BLUE, DEFAULT, false, false);
 	    #endif
@@ -411,7 +509,7 @@ int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int
 	    unsigned int p_entrada = 0;
 	    int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
 	    if(err<0)return err;
-	    push_cache(camino, p_inodo);
+	    cache.update(camino, p_inodo, 'w');
 	    #if DBGLVL9
 	    xpperror("\n[ mi_write() -> Actualizar caché ]\n", ORANGE, DEFAULT, false, false);
 	    #endif
@@ -433,12 +531,10 @@ int mi_write(const char *camino, void *buffer, unsigned int offset, unsigned int
  *   nbytes -> número de bytes a leer
 */
 int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int nbytes){
-    int cache_pos = find_cache(camino);
-    unsigned int p_inodo = 0;
-
-    if(cache_pos>=0){
+  unsigned int p_inodo = 0;
+  int cache_pos = cache.find(camino, &p_inodo, 'w');  
+  if(cache_pos>=0){
         //Utilizamos el inodo almacenado en caché
-	    p_inodo = cache.p_inode[cache_pos];
 	    #if DBGLVL9
 	    xpperror("\n[ mi_read() -> Utilizamos datos almacenados en caché ]\n", BLUE, DEFAULT, false, false);
 	    #endif
@@ -448,7 +544,7 @@ int mi_read(const char *camino, void *buffer, unsigned int offset, unsigned int 
 	    unsigned int p_entrada = 0;
 	    int err = buscar_entrada(camino, &rootInode, &p_inodo, &p_entrada, 0, 0);
 	    if(err<0)return err;
-	    push_cache(camino, p_inodo);
+	    cache.update(camino, p_inodo, 'r');
 	    #if DBGLVL9
 	    xpperror("\n[ mi_read() -> Actualizar caché ]\n", ORANGE, DEFAULT, false, false);
 	    #endif

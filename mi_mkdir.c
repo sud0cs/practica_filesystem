@@ -60,7 +60,7 @@ int main(int argc, char **argv){
         if(*ptr == '/' && ptr!=path){
           *(ptr_segment+sizeof(char)) = '\0';
           int err = mi_creat(path_segment, perms);
-          if(err<0){
+          if(err<0 && err!=ERROR_ENTRADA_YA_EXISTENTE){
             print_dir_error(err);
             bumount();
             return FALLO;

@@ -21,6 +21,10 @@
 #define DBGLVL9 0 //Nivel de debug para operaciones con caché
 #define CACHE_SIZE 64 //Tamaño de la caché de rutas
 
+#define FIFO_CACHE 0
+#define LRU_CACHE 1
+#define LAST_RW_CACHE 2
+
 /*
  * Estructura de una entrada de directorio
  *   nombre -> nombre del fichero/directorio
@@ -43,7 +47,27 @@ typedef struct{
     unsigned int items;
     char path[CACHE_SIZE][TAMNOMBRE*MAX_PATH_DEPTH];
     unsigned int p_inode[CACHE_SIZE];
-}path_cache;
+}fifo_cache;
+
+typedef struct {
+    unsigned int items;
+    char path[CACHE_SIZE][TAMNOMBRE * MAX_PATH_DEPTH];
+    unsigned int p_inode[CACHE_SIZE];
+    struct timeval last_access_time[CACHE_SIZE];
+}lru_cache;
+
+typedef struct {
+    char path_r[TAMNOMBRE * MAX_PATH_DEPTH];
+    unsigned int inode_r;
+    char path_w[TAMNOMBRE * MAX_PATH_DEPTH];
+    unsigned int inode_w;
+}last_rw_cache;
+
+typedef struct {
+  int (*find)(const char* camino, unsigned int *p_inodo, char rw_type);
+  void (*update)(const char* camino, unsigned int p_inodo, char rw_type);
+  void *data;
+}dynamic_cache;
 
 int extraer_camino(const char *camino, char *inicial, char *final, char *tipo);
 int buscar_entrada(const char *camino_parcial, unsigned int *p_inodo_dir, unsigned int *p_inodo, unsigned int *p_entrada, char reservar, unsigned char permisos);
