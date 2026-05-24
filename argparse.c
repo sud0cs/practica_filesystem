@@ -7,6 +7,8 @@ arg* args;
 unsigned int arg_count = 0;
 int argc;
 char **argv;
+
+//tipos que puede almacenar el parser
 char* get_type_name(arg_type t){
   switch(t){
     case CHAR:
@@ -23,6 +25,18 @@ char* get_type_name(arg_type t){
       return NULL;
   }
 }
+
+/*
+ * init_parser()
+ * ----------------------------------------------------------
+ * inicializa las variables del parser
+ * 
+ * Parámetros:
+ *   max_args -> número de argumentos que puede leer el parser
+ *   _argc -> argc original
+ *   _argv -> argv original
+ * 
+*/
 void init_parser(unsigned int max_args, int _argc, char **_argv){
   args = calloc(max_args, sizeof(arg));
   argc = _argc;
@@ -33,6 +47,17 @@ void init_parser(unsigned int max_args, int _argc, char **_argv){
   }
 }
 
+/*
+ * find_arg()
+ * ----------------------------------------------------------
+ * encuentra el argumento basado en su nombre
+ * 
+ * Parámetros:
+ *   name -> nombre del argumento
+ * 
+ * devuelve:
+ *   el argumento encontrado o NULL
+*/
 arg* find_arg(char *name){
   for(int i = 0; i<arg_count; i++){
       if(strcmp(name, args[i].name)==0)return &args[i];
@@ -40,6 +65,18 @@ arg* find_arg(char *name){
   return NULL;
 }
 
+/*
+ * add_arg()
+ * ----------------------------------------------------------
+ * añade el argumento para que el parser lo pueda leer
+ * 
+ * Parámetros:
+ *   name -> nombre del argumento
+ *   mandatory -> si el argumento es obligatorio o no
+ *   type -> tipo de variable a leer
+ *   description -> descripción del argumento
+ * 
+*/
 void add_arg(char *name, bool mandatory, arg_type type, char* description){
   arg _arg;
   if(strcmp(name, "") == 0 || find_arg(name)!=NULL || (mandatory && type==NONE))return;
@@ -52,6 +89,12 @@ void add_arg(char *name, bool mandatory, arg_type type, char* description){
   arg_count++;
 }
 
+/*
+ * print_help()
+ * ----------------------------------------------------------
+ * Imprime el mensaje de ayuda del programa
+ * 
+*/
 void print_help(){
   xpprint("%s ", DEFAULT, DEFAULT, true, false, argv[0]);
   for(int i = 0; i<arg_count; i++){
@@ -67,6 +110,18 @@ void print_help(){
   }
 }
 
+/*
+ * arg_name_in_argv()
+ * ----------------------------------------------------------
+ * Busca el nombre de un argumento entre los argumentos pasados al programa (argv)
+ * 
+ * Parámetros:
+ *   _arg -> argumento a buscar
+ *   i -> índice a partir del cual buscar en argv
+ * 
+ * Devuelve:
+ *   true si el argumento se encuentra, si no false.
+*/
 bool arg_name_in_argv(arg _arg, int i){
   for(;i<argc; i++){
     if(argv[i][0]=='-' && strcmp(strpl(argv[i], "-", "", 1), _arg.name)==0)return true;
@@ -74,6 +129,17 @@ bool arg_name_in_argv(arg _arg, int i){
   return false;
 }
 
+/*
+ * find_empty_mandatory_arg()
+ * ----------------------------------------------------------
+ * busca el primer argumento obligatorio sin ningún dato almacenado
+ * 
+ * Parámetros:
+ *   argv_i -> índice para buscar en arg_name_in_argv
+ * 
+ * devuelve:
+ *   el primer argumento vacío si se encuentra, si no null
+*/
 arg* find_empty_mandatory_arg(int argv_i){
   for(int i = 0; i<arg_count; i++){
     if(args[i].mandatory && args[i].content == NULL && !arg_name_in_argv(args[i], argv_i))return &args[i];
@@ -81,6 +147,16 @@ arg* find_empty_mandatory_arg(int argv_i){
   return NULL;
 }
 
+/*
+ * parse_args()
+ * ----------------------------------------------------------
+ * busca los argumentos creados en los argumentos pasados al programa
+ * y almacena sus datos con el tipo correspondiente de variable
+ * 
+ * devuelve:
+ *   El número de argumentos encontrados o MISSING_ARGS_ERROR en caso
+ *   de que haya argumentos obligatorios sin pasar al programa
+*/
 int parse_args(){
   arg* _arg;
   int offset;
@@ -137,17 +213,41 @@ int parse_args(){
   return ac;
 }
 
+/*
+ * add_arg()
+ * ----------------------------------------------------------
+ * Devuelve true si el argumento se ha pasado al programa
+ * 
+ * Parámetros:
+ *   name -> nombre del argumento
+ * 
+*/
 bool arg_exists(char* name){
     arg *_arg = find_arg(name);
     return (_arg!=NULL&&_arg->content!=NULL);
 }
 
+/*
+ * add_value()
+ * ----------------------------------------------------------
+ * Devuelve el contenido de un argumento
+ * 
+ * Parámetros:
+ *   name -> nombre del argumento
+ * 
+*/
 void* arg_value(char *name){
     arg* _arg = find_arg(name);
     if(_arg==NULL)return NULL;
     return _arg -> content;
 }
 
+/*
+ * free_args()
+ * ----------------------------------------------------------
+ * Libera todas las variables
+ *
+*/
 void free_args(){
     for(int i = 0; i<arg_count; i++){
 	    if(args[i].type == NONE){
