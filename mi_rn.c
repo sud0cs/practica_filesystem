@@ -17,7 +17,7 @@
  *   FALLO(-1) si hay algun error
 */
 int main(int argc, char **argv){
-    int_parser(3, argc, argv);
+    init_parser(3, argc, argv);
     add_arg("disco", true, STRING, "Nombre del disco virtual");
     add_arg("og-path", true, STRING, "Ruta original");
     add_arg("destino", true, STRING, "Nuevo nombre");

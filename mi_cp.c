@@ -64,7 +64,7 @@ int main(int argc, char **argv){
     //Montar disco
     if(bmount(disco)<0){
         fprintf(stderr, "Error: bmount\n");
-        free_args;
+        free_args();
         return FALLO;
     }
 

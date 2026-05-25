@@ -36,7 +36,7 @@ int copy_file(const char *src, const char *dst){
  *   src-> ruta origen
  *   dst-> ruta destino
 */
-int cp_recursive(const char *src, const char *dst){
+int cp_recursive(char *src, char *dst){
     char buffer[4096];
     memset(buffer, 0, sizeof(buffer));
 
